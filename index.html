@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>字幕コラボ</title>
+
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
 </head>
 
 <body style="background:#111;color:white;font-family:sans-serif">
@@ -28,11 +30,15 @@ function render() {
         ${["A","B","C"].map(k => `
           <div>
             <h3>${k} ${active === k ? "←送信可" : ""}</h3>
+
             <textarea
-              style="width:200px;height:100px"
+              id="input-${k}"
+              style="width:200px;height:100px;font-size:20px"
               oninput="typing('${k}', this.value)"
-            >${inputs[k]}</textarea>
+            ></textarea>
+
             <br>
+
             <button onclick="send('${k}')" ${active !== k ? "disabled":""}>
               送信
             </button>
@@ -46,30 +52,47 @@ function render() {
       </div>
     </div>
   `;
+
+  // ✅ ここが重要（毎回値を再設定）
+  ["A","B","C"].forEach(k => {
+    const el = document.getElementById("input-" + k);
+    if (el) {
+      el.value = inputs[k];
+    }
+  });
 }
 
+// 入力
 function typing(key, value) {
   inputs[key] = value;
   socket.emit("typing", { key, value });
   render();
 }
 
+// 送信
 function send(key) {
-  socket.emit("send", { key, text: inputs[key] });
+  socket.emit("send", {
+    key,
+    text: inputs[key]
+  });
+
   inputs[key] = "";
   render();
 }
 
+// 他人の入力受信
 socket.on("typing", ({ key, value }) => {
   inputs[key] = value;
   render();
 });
 
+// ログ受信
 socket.on("log", (data) => {
   log.unshift(data);
   render();
 });
 
+// 送信権変更
 socket.on("active", (next) => {
   active = next;
   render();
