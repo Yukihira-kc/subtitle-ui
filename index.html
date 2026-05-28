@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>字幕コラボ</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body style="background:#111;color:white;font-family:sans-serif">
+
+<h1>字幕コラボ</h1>
+
+<div id="app"></div>
+
+<script>
+const socket = io("https://subtitle-server-czoz.onrender.com");
+
+let inputs = { A: "", B: "", C: "" };
+let active = "A";
+let log = [];
+
+function render() {
+  const app = document.getElementById("app");
+
+  app.innerHTML = `
+    <div style="display:flex;gap:20px">
+      <div>
+        ${["A","B","C"].map(k => `
+          <div>
+            <h3>${k} ${active === k ? "←送信可" : ""}</h3>
+            <textarea
+              style="width:200px;height:100px"
+              oninput="typing('${k}', this.value)"
+            >${inputs[k]}</textarea>
+            <br>
+            <button onclick="send('${k}')" ${active !== k ? "disabled":""}>
+              送信
+            </button>
+          </div>
+        `).join("")}
+      </div>
+
+      <div>
+        <h2>ログ</h2>
+        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function typing(key, value) {
+  inputs[key] = value;
+  socket.emit("typing", { key, value });
+  render();
+}
+
+function send(key) {
+  socket.emit("send", { key, text: inputs[key] });
+  inputs[key] = "";
+  render();
+}
+
+socket.on("typing", ({ key, value }) => {
+  inputs[key] = value;
+  render();
+});
+
+socket.on("log", (data) => {
+  log.unshift(data);
+  render();
+});
+
+socket.on("active", (next) => {
+  active = next;
+  render();
+});
+
+render();
+</script>
+
+</body>
+</html>
