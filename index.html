@@ -10,7 +10,7 @@
 
 <body style="background:#111;color:white;font-family:sans-serif">
 
-<h1>字幕コラボ</h1>
+<h1>字幕コラあボ</h1>
 
 <div id="role-select">
   <h2>担当を選択</h2>
@@ -96,3 +96,89 @@ function render() {
             </h3>
 
             <textarea
+              id="input-${k}"
+              ${myRole !== k ? "disabled" : ""}
+              style="width:200px;height:100px"
+              oninput="typing('${k}', this.value)"
+            ></textarea>
+
+            <br>
+
+            <button
+              onclick="send('${k}')"
+              ${active !== k || myRole !== k ? "disabled" : ""}
+            >
+              送信
+            </button>
+          </div>
+        `).join("")}
+      </div>
+
+      <div>
+        <h2>ログ</h2>
+        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
+      </div>
+    </div>
+  `;
+
+  ["A","B","C"].forEach(k => {
+    const el = document.getElementById("input-" + k);
+    if (el && document.activeElement !== el) {
+      el.value = inputs[k];
+    }
+  });
+}
+
+// ✅ 入力
+function typing(key, value) {
+  inputs[key] = value;
+  if (socket) socket.emit("typing", { key, value });
+}
+
+// ✅ 送信
+function send(key) {
+
+  if (active !== key) return;
+
+  if (socket) {
+    socket.emit("send", {
+      key,
+      text: inputs[key]
+    });
+
+    socket.emit("typing", {
+      key,
+      value: ""
+    });
+  }
+
+  inputs[key] = "";
+
+  setTimeout(render, 10);
+}
+
+// ✅ 受信（安全）
+if (socket) {
+
+  socket.on("typing", ({ key, value }) => {
+    inputs[key] = value;
+  });
+
+  socket.on("log", (data) => {
+    log.unshift(data);
+    setTimeout(render, 10);
+  });
+
+  socket.on("active", (next) => {
+    active = next;
+    setTimeout(render, 10);
+  });
+
+}
+
+render();
+
+</script>
+
+</body>
+</html>
