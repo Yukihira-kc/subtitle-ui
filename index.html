@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕</title>
+<title>字幕コラボ</title>
 
 https://cdn.socket.io/4.7.2/socket.io.min.js
 </head>
@@ -55,3 +55,85 @@ function render() {
 
             <textarea
               id="input-${k}"
+              style="width:200px;height:100px;font-size:20px"
+              ${myRole !== k ? "disabled" : ""}
+              oninput="typing('${k}', this.value)"
+            ></textarea>
+
+            <br>
+
+            <button
+              onclick="send('${k}')"
+              ${active !== k || myRole !== k ? "disabled" : ""}
+            >
+              送信
+            </button>
+          </div>
+        `).join("")}
+      </div>
+
+      <div>
+        <h2>ログ</h2>
+        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
+      </div>
+    </div>
+  `;
+
+  // ✅ 値反映
+  ["A","B","C"].forEach(k => {
+    const el = document.getElementById("input-" + k);
+
+    if (el && document.activeElement !== el) {
+      el.value = inputs[k];
+    }
+  });
+}
+
+// ✅ 入力（自分だけ送信）
+function typing(key, value) {
+  inputs[key] = value;
+
+  socket.emit("typing", { key, value });
+}
+
+// ✅ 送信 + クリア
+function send(key) {
+  socket.emit("send", {
+    key,
+    text: inputs[key]
+  });
+
+  // ✅ 全員に空通知
+  socket.emit("typing", {
+    key,
+    value: ""
+  });
+
+  inputs[key] = "";
+
+  render();
+}
+
+// ✅ 他人の入力
+socket.on("typing", ({ key, value }) => {
+  inputs[key] = value;
+  render();
+});
+
+// ✅ ログ
+socket.on("log", (data) => {
+  log.unshift(data);
+  render();
+});
+
+// ✅ 送信権
+socket.on("active", (next) => {
+  active = next;
+  render();
+});
+
+render();
+</script>
+
+</body>
+</html>
