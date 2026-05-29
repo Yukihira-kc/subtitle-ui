@@ -29,11 +29,20 @@ let active = "A";
 let log = [];
 let myRole = null;
 
-// ✅ 役割ボタン
+// ✅ 並び順ロジック（今回追加）
+function getOrder() {
+  if (myRole === "A") return ["C", "A", "B"];
+  if (myRole === "B") return ["A", "B", "C"];
+  if (myRole === "C") return ["B", "C", "A"];
+  return ["A", "B", "C"];
+}
+
+// ✅ ボタン
 document.getElementById("btnA").onclick = () => selectRole("A");
 document.getElementById("btnB").onclick = () => selectRole("B");
 document.getElementById("btnC").onclick = () => selectRole("C");
 
+// ✅ 役割選択
 function selectRole(role) {
   myRole = role;
 
@@ -50,11 +59,11 @@ function render() {
   app.innerHTML = `
     <div style="display:flex;gap:20px">
       <div>
-        ${["A","B","C"].map(k => `
+        ${getOrder().map(k => `
           <div>
             <h3>
               ${k}
-              ${myRole === k ? "(自分)" : ""}
+              ${myRole === k ? "（自分）" : ""}
               ${active === k ? " ←送信可" : ""}
             </h3>
 
@@ -84,7 +93,7 @@ function render() {
     </div>
   `;
 
-  // ✅ 値を反映（入力中は触らない）
+  // ✅ 値反映（入力中は触らない）
   ["A","B","C"].forEach(k => {
     const el = document.getElementById("input-" + k);
     if (el && document.activeElement !== el) {
@@ -93,7 +102,7 @@ function render() {
   });
 }
 
-// ✅ 入力（自分→全員）
+// ✅ 入力（同期）
 function typing(key, value) {
   inputs[key] = value;
   socket.emit("typing", { key, value });
@@ -112,7 +121,7 @@ function send(key) {
     text: inputs[key]
   });
 
-  // ✅ 全員にクリア通知
+  // ✅ 全員の画面で空にする
   socket.emit("typing", {
     key,
     value: ""
@@ -122,13 +131,13 @@ function send(key) {
   render();
 }
 
-// ✅ ログ更新
+// ✅ ログ
 socket.on("log", (data) => {
   log.unshift(data);
   render();
 });
 
-// ✅ 送信権切替
+// ✅ 送信権
 socket.on("active", (next) => {
   active = next;
   render();
@@ -139,3 +148,4 @@ render();
 
 </body>
 </html>
+``
