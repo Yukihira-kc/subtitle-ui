@@ -29,7 +29,7 @@ let active = "A";
 let log = [];
 let myRole = null;
 
-// ✅ 並び順ロジック（今回追加）
+// ✅ 並び順（中央固定）
 function getOrder() {
   if (myRole === "A") return ["C", "A", "B"];
   if (myRole === "B") return ["A", "B", "C"];
@@ -37,7 +37,7 @@ function getOrder() {
   return ["A", "B", "C"];
 }
 
-// ✅ ボタン
+// ✅ ボタン設定
 document.getElementById("btnA").onclick = () => selectRole("A");
 document.getElementById("btnB").onclick = () => selectRole("B");
 document.getElementById("btnC").onclick = () => selectRole("C");
@@ -93,59 +93,9 @@ function render() {
     </div>
   `;
 
-  // ✅ 値反映（入力中は触らない）
+  // ✅ 入力値反映（入力中は触らない）
   ["A","B","C"].forEach(k => {
     const el = document.getElementById("input-" + k);
     if (el && document.activeElement !== el) {
       el.value = inputs[k];
     }
-  });
-}
-
-// ✅ 入力（同期）
-function typing(key, value) {
-  inputs[key] = value;
-  socket.emit("typing", { key, value });
-}
-
-// ✅ 他人の入力受信
-socket.on("typing", ({ key, value }) => {
-  inputs[key] = value;
-  render();
-});
-
-// ✅ 送信
-function send(key) {
-  socket.emit("send", {
-    key,
-    text: inputs[key]
-  });
-
-  // ✅ 全員の画面で空にする
-  socket.emit("typing", {
-    key,
-    value: ""
-  });
-
-  inputs[key] = "";
-  render();
-}
-
-// ✅ ログ
-socket.on("log", (data) => {
-  log.unshift(data);
-  render();
-});
-
-// ✅ 送信権
-socket.on("active", (next) => {
-  active = next;
-  render();
-});
-
-render();
-</script>
-
-</body>
-</html>
-``
