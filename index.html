@@ -2,15 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕1</title>
+<title>字幕コラボ</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
 </head>
 
 <body style="background:#111;color:white;font-family:sans-serif">
 
-<h1>字幕1</h1>
+<h1>字幕コラボ</h1>
 
 <div id="app"></div>
 
@@ -53,23 +52,28 @@ function render() {
     </div>
   `;
 
-  // ✅ ここが重要（毎回値を再設定）
+  // ✅ 値をあとから入れる（重要）
   ["A","B","C"].forEach(k => {
     const el = document.getElementById("input-" + k);
-    if (el) {
+
+    // ✅ 自分が打ってる最中は触らない（これが今回の核心）
+    if (el && document.activeElement !== el) {
       el.value = inputs[k];
     }
   });
 }
 
-// 入力
+// ✅ 入力（リアルタイム共有）
 function typing(key, value) {
   inputs[key] = value;
+
+  // 他人に送る
   socket.emit("typing", { key, value });
-  render();
+
+  // ✅ renderしない ← これが重要！！
 }
 
-// 送信
+// ✅ 送信
 function send(key) {
   socket.emit("send", {
     key,
@@ -77,29 +81,32 @@ function send(key) {
   });
 
   inputs[key] = "";
+
   render();
 }
 
-// 他人の入力受信
+// ✅ 他人の入力を受信
 socket.on("typing", ({ key, value }) => {
   inputs[key] = value;
-  render();
+  render(); // ← 他人のときだけ更新
 });
 
-// ログ受信
+// ✅ ログ受信
 socket.on("log", (data) => {
   log.unshift(data);
   render();
 });
 
-// 送信権変更
+// ✅ 送信権更新
 socket.on("active", (next) => {
   active = next;
   render();
 });
 
+// 初回描画
 render();
 </script>
 
 </body>
 </html>
+``
