@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕コ１１１１１」「」ラボ</title>
+<title>字幕コあラボ</title>
 
+<!-- ✅ これ絶対必要 -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -13,10 +14,10 @@
 <h1>字幕コラボ</h1>
 
 <div id="role-select">
-  <h2>担当を選んでください</h2>
-  <button onclick="selectRole('A')">A</button>
-  <button onclick="selectRole('B')">B</button>
-  <button onclick="selectRole('C')">C</button>
+  <h2>選択：</h2>
+  <button id="btnA">A</button>
+  <button id="btnB">B</button>
+  <button id="btnC">C</button>
 </div>
 
 <div id="app" style="display:none"></div>
@@ -24,15 +25,22 @@
 <script>
 const socket = io("https://subtitle-server-czoz.onrender.com");
 
-let inputs = { A: "", B: "", C: "" };
-let active = "A";
-let log = [];
 let myRole = null;
+let inputs = { A:"", B:"", C:"" };
+
+// ✅ ボタンをJSで設定（onclickをHTMLに書かない）
+document.getElementById("btnA").onclick = () => selectRole("A");
+document.getElementById("btnB").onclick = () => selectRole("B");
+document.getElementById("btnC").onclick = () => selectRole("C");
 
 function selectRole(role) {
+  console.log("選択された:", role); // ← 確認用
+
   myRole = role;
+
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
+
   render();
 }
 
@@ -40,37 +48,26 @@ function render() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
-    <div style="display:flex;gap:20px">
-      <div>
-        ${["A","B","C"].map(k => `
-          <div>
-            <h3>
-              ${k}
-              ${myRole === k ? "（自分）" : ""}
-              ${active === k ? " ←送信可" : ""}
-            </h3>
+    <div>
+      ${["A","B","C"].map(k => `
+        <div>
+          <h3>${k} ${myRole === k ? "(自分)" : ""}</h3>
 
-            <textarea
-              id="input-${k}"
-              style="width:200px;height:100px;font-size:20px"
-              ${myRole !== k ? "disabled" : ""}
-              oninput="typing('${k}', this.value)"
-            ></textarea>
-
-            <br>
-
-            <button
-              onclick="send('${k}')"
-              ${active !== k || myRole !== k ? "disabled" : ""}
-            >
-              送信
-            </button>
-          </div>
-        `).join("")}
-      </div>
-
-      <div>
-        <h2>ログ</h2>
-        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
-      </div>
+          <textarea
+            id="input-${k}"
+            ${myRole !== k ? "disabled" : ""}
+            style="width:200px;height:100px"
+          ></textarea>
+        </div>
+      `).join("")}
     </div>
+  `;
+}
+
+// ✅ 最初にログ出す（生きてるか確認）
+console.log("JS起動OK");
+</script>
+
+</body>
+</html>
+``
