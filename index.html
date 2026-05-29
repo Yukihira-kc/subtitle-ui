@@ -22,14 +22,38 @@
 <div id="app" style="display:none"></div>
 
 <script>
-const socket = io("https://subtitle-server-czoz.onrender.com");
+
+// ✅ ソケットは後から接続（ここ重要）
+let socket = null;
+
+function connectSocket() {
+  try {
+    socket = io("https://subtitle-server-czoz.onrender.com", {
+      reconnection: true,
+      timeout: 5000
+    });
+
+    socket.on("connect", () => {
+      console.log("サーバー接続成功");
+    });
+
+    socket.on("connect_error", () => {
+      console.log("接続エラー（起動待ち）");
+    });
+
+  } catch (e) {
+    console.log("socket初期化失敗", e);
+  }
+}
+
+connectSocket();
 
 let inputs = { A:"", B:"", C:"" };
 let active = "A";
 let log = [];
 let myRole = null;
 
-// ✅ 並び順（中央固定）
+// ✅ 並び順
 function getOrder() {
   if (myRole === "A") return ["C", "A", "B"];
   if (myRole === "B") return ["A", "B", "C"];
@@ -37,13 +61,17 @@ function getOrder() {
   return ["A", "B", "C"];
 }
 
-// ✅ ボタン設定
-document.getElementById("btnA").onclick = () => selectRole("A");
-document.getElementById("btnB").onclick = () => selectRole("B");
-document.getElementById("btnC").onclick = () => selectRole("C");
+// ✅ ボタンイベント（エラー防止でJS側に書く）
+window.onload = () => {
+  document.getElementById("btnA").onclick = () => selectRole("A");
+  document.getElementById("btnB").onclick = () => selectRole("B");
+  document.getElementById("btnC").onclick = () => selectRole("C");
+};
 
-// ✅ 役割選択
+// ✅ 役割選択（ここが止まってた）
 function selectRole(role) {
+  console.log("選択:", role);
+
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -63,39 +91,8 @@ function render() {
           <div>
             <h3>
               ${k}
-              ${myRole === k ? "（自分）" : ""}
+              ${myRole === k ? "(自分)" : ""}
               ${active === k ? " ←送信可" : ""}
             </h3>
 
             <textarea
-              id="input-${k}"
-              ${myRole !== k ? "disabled" : ""}
-              style="width:200px;height:100px"
-              oninput="typing('${k}', this.value)"
-            ></textarea>
-
-            <br>
-
-            <button
-              onclick="send('${k}')"
-              ${active !== k || myRole !== k ? "disabled" : ""}
-            >
-              送信
-            </button>
-          </div>
-        `).join("")}
-      </div>
-
-      <div>
-        <h2>ログ</h2>
-        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
-      </div>
-    </div>
-  `;
-
-  // ✅ 入力値反映（入力中は触らない）
-  ["A","B","C"].forEach(k => {
-    const el = document.getElementById("input-" + k);
-    if (el && document.activeElement !== el) {
-      el.value = inputs[k];
-    }
