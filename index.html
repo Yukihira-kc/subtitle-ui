@@ -2,9 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕コラボ</title>
+<title>字幕コ１１１１１」「」ラボ</title>
 
-https://cdn.socket.io/4.7.2/socket.io.min.js
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
 </head>
 
 <body style="background:#111;color:white;font-family:sans-serif">
@@ -28,17 +29,13 @@ let active = "A";
 let log = [];
 let myRole = null;
 
-// ✅ 役割選択
 function selectRole(role) {
   myRole = role;
-
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
-
   render();
 }
 
-// ✅ 描画
 function render() {
   const app = document.getElementById("app");
 
@@ -77,63 +74,3 @@ function render() {
         ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
       </div>
     </div>
-  `;
-
-  // ✅ 値反映
-  ["A","B","C"].forEach(k => {
-    const el = document.getElementById("input-" + k);
-
-    if (el && document.activeElement !== el) {
-      el.value = inputs[k];
-    }
-  });
-}
-
-// ✅ 入力（自分だけ送信）
-function typing(key, value) {
-  inputs[key] = value;
-
-  socket.emit("typing", { key, value });
-}
-
-// ✅ 送信 + クリア
-function send(key) {
-  socket.emit("send", {
-    key,
-    text: inputs[key]
-  });
-
-  // ✅ 全員に空通知
-  socket.emit("typing", {
-    key,
-    value: ""
-  });
-
-  inputs[key] = "";
-
-  render();
-}
-
-// ✅ 他人の入力
-socket.on("typing", ({ key, value }) => {
-  inputs[key] = value;
-  render();
-});
-
-// ✅ ログ
-socket.on("log", (data) => {
-  log.unshift(data);
-  render();
-});
-
-// ✅ 送信権
-socket.on("active", (next) => {
-  active = next;
-  render();
-});
-
-render();
-</script>
-
-</body>
-</html>
