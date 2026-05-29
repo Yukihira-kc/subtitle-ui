@@ -4,14 +4,21 @@
 <meta charset="UTF-8">
 <title>字幕コラボ</title>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+https://cdn.socket.io/4.7.2/socket.io.min.js
 </head>
 
 <body style="background:#111;color:white;font-family:sans-serif">
 
 <h1>字幕コラボ</h1>
 
-<div id="app"></div>
+<div id="role-select">
+  <h2>担当を選んでください</h2>
+  <button onclick="selectRole('A')">A</button>
+  <button onclick="selectRole('B')">B</button>
+  <button onclick="selectRole('C')">C</button>
+</div>
+
+<div id="app" style="display:none"></div>
 
 <script>
 const socket = io("https://subtitle-server-czoz.onrender.com");
@@ -19,7 +26,19 @@ const socket = io("https://subtitle-server-czoz.onrender.com");
 let inputs = { A: "", B: "", C: "" };
 let active = "A";
 let log = [];
+let myRole = null;
 
+// ✅ 役割選択
+function selectRole(role) {
+  myRole = role;
+
+  document.getElementById("role-select").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  render();
+}
+
+// ✅ 描画
 function render() {
   const app = document.getElementById("app");
 
@@ -28,85 +47,11 @@ function render() {
       <div>
         ${["A","B","C"].map(k => `
           <div>
-            <h3>${k} ${active === k ? "←送信可" : ""}</h3>
+            <h3>
+              ${k}
+              ${myRole === k ? "（自分）" : ""}
+              ${active === k ? " ←送信可" : ""}
+            </h3>
 
             <textarea
               id="input-${k}"
-              style="width:200px;height:100px;font-size:20px"
-              oninput="typing('${k}', this.value)"
-            ></textarea>
-
-            <br>
-
-            <button onclick="send('${k}')" ${active !== k ? "disabled":""}>
-              送信
-            </button>
-          </div>
-        `).join("")}
-      </div>
-
-      <div>
-        <h2>ログ</h2>
-        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
-      </div>
-    </div>
-  `;
-
-  // ✅ 値をあとから入れる（重要）
-  ["A","B","C"].forEach(k => {
-    const el = document.getElementById("input-" + k);
-
-    // ✅ 自分が打ってる最中は触らない（これが今回の核心）
-    if (el && document.activeElement !== el) {
-      el.value = inputs[k];
-    }
-  });
-}
-
-// ✅ 入力（リアルタイム共有）
-function typing(key, value) {
-  inputs[key] = value;
-
-  // 他人に送る
-  socket.emit("typing", { key, value });
-
-  // ✅ renderしない ← これが重要！！
-}
-
-// ✅ 送信
-function send(key) {
-  socket.emit("send", {
-    key,
-    text: inputs[key]
-  });
-
-  inputs[key] = "";
-
-  render();
-}
-
-// ✅ 他人の入力を受信
-socket.on("typing", ({ key, value }) => {
-  inputs[key] = value;
-  render(); // ← 他人のときだけ更新
-});
-
-// ✅ ログ受信
-socket.on("log", (data) => {
-  log.unshift(data);
-  render();
-});
-
-// ✅ 送信権更新
-socket.on("active", (next) => {
-  active = next;
-  render();
-});
-
-// 初回描画
-render();
-</script>
-
-</body>
-</html>
-``
