@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕コあラボ</title>
+<title>字幕コラボ</title>
 
-<!-- ✅ これ絶対必要 -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -14,7 +13,7 @@
 <h1>字幕コラボ</h1>
 
 <div id="role-select">
-  <h2>選択：</h2>
+  <h2>担当を選択</h2>
   <button id="btnA">A</button>
   <button id="btnB">B</button>
   <button id="btnC">C</button>
@@ -25,17 +24,17 @@
 <script>
 const socket = io("https://subtitle-server-czoz.onrender.com");
 
-let myRole = null;
 let inputs = { A:"", B:"", C:"" };
+let active = "A";
+let log = [];
+let myRole = null;
 
-// ✅ ボタンをJSで設定（onclickをHTMLに書かない）
+// ✅ 役割ボタン
 document.getElementById("btnA").onclick = () => selectRole("A");
 document.getElementById("btnB").onclick = () => selectRole("B");
 document.getElementById("btnC").onclick = () => selectRole("C");
 
 function selectRole(role) {
-  console.log("選択された:", role); // ← 確認用
-
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -44,30 +43,99 @@ function selectRole(role) {
   render();
 }
 
+// ✅ 描画
 function render() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
-    <div>
-      ${["A","B","C"].map(k => `
-        <div>
-          <h3>${k} ${myRole === k ? "(自分)" : ""}</h3>
+    <div style="display:flex;gap:20px">
+      <div>
+        ${["A","B","C"].map(k => `
+          <div>
+            <h3>
+              ${k}
+              ${myRole === k ? "(自分)" : ""}
+              ${active === k ? " ←送信可" : ""}
+            </h3>
 
-          <textarea
-            id="input-${k}"
-            ${myRole !== k ? "disabled" : ""}
-            style="width:200px;height:100px"
-          ></textarea>
-        </div>
-      `).join("")}
+            <textarea
+              id="input-${k}"
+              ${myRole !== k ? "disabled" : ""}
+              style="width:200px;height:100px"
+              oninput="typing('${k}', this.value)"
+            ></textarea>
+
+            <br>
+
+            <button
+              onclick="send('${k}')"
+              ${active !== k || myRole !== k ? "disabled" : ""}
+            >
+              送信
+            </button>
+          </div>
+        `).join("")}
+      </div>
+
+      <div>
+        <h2>ログ</h2>
+        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
+      </div>
     </div>
   `;
+
+  // ✅ 値を反映（入力中は触らない）
+  ["A","B","C"].forEach(k => {
+    const el = document.getElementById("input-" + k);
+    if (el && document.activeElement !== el) {
+      el.value = inputs[k];
+    }
+  });
 }
 
-// ✅ 最初にログ出す（生きてるか確認）
-console.log("JS起動OK");
+// ✅ 入力（自分→全員）
+function typing(key, value) {
+  inputs[key] = value;
+  socket.emit("typing", { key, value });
+}
+
+// ✅ 他人の入力受信
+socket.on("typing", ({ key, value }) => {
+  inputs[key] = value;
+  render();
+});
+
+// ✅ 送信
+function send(key) {
+  socket.emit("send", {
+    key,
+    text: inputs[key]
+  });
+
+  // ✅ 全員にクリア通知
+  socket.emit("typing", {
+    key,
+    value: ""
+  });
+
+  inputs[key] = "";
+  render();
+}
+
+// ✅ ログ更新
+socket.on("log", (data) => {
+  log.unshift(data);
+  render();
+});
+
+// ✅ 送信権切替
+socket.on("active", (next) => {
+  active = next;
+  render();
+});
+
+render();
 </script>
 
 </body>
 </html>
-``
