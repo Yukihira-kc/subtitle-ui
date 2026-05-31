@@ -37,15 +37,20 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// UI生成
+// ✅ UI生成（ここ修正）
 function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
-    <div id="columns"></div>
-    <div>
-      <h2>ログ</h2>
-      <div id="log"></div>
+    <div style="display:flex; gap:40px;">
+      
+      <div id="columns"></div>
+
+      <div>
+        <h2>ログ</h2>
+        <div id="log"></div>
+      </div>
+
     </div>
   `;
 
@@ -99,7 +104,7 @@ function updateUI() {
     log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("");
 }
 
-// 役割選択
+// 役割
 function selectRole(role) {
   myRole = role;
   document.getElementById("role-select").style.display = "none";
@@ -113,55 +118,40 @@ function typing(key, value) {
   socket.emit("typing", { key, value });
 }
 
-// ✅ 🔥 送信（完全版）
+// 送信
 function send(key) {
-
   if (active !== key) return;
 
-  // ✅ 1. DOMを即クリア（これが大事）
   const inputEl = document.getElementById("input-" + key);
-  if (inputEl) {
-    inputEl.value = "";
-  }
+  if (inputEl) inputEl.value = "";
 
-  // ✅ 2. データもクリア
   const text = inputs[key];
   inputs[key] = "";
 
-  // ✅ 3. サーバー送信
-  socket.emit("send", {
-    key,
-    text: text
-  });
+  socket.emit("send", { key, text });
 
-  // ✅ 4. 他人にもクリア通知
-  socket.emit("typing", {
-    key,
-    value: ""
-  });
+  socket.emit("typing", { key, value: "" });
 
   updateUI();
 }
 
-// 他人入力
+// 受信
 socket.on("typing", ({ key, value }) => {
   inputs[key] = value;
   updateUI();
 });
 
-// ログ
 socket.on("log", (data) => {
   log.unshift(data);
   updateUI();
 });
 
-// 送信権
 socket.on("active", (next) => {
   active = next;
   updateUI();
 });
 
-// ✅ F12送信
+// F12送信
 document.addEventListener("keydown", (e) => {
   if (e.key === "F12") {
     e.preventDefault();
