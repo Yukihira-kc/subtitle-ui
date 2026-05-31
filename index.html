@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <title>字幕コラボ</title>
 
-<!-- ✅ ここ修正済み -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
 
 <body style="background:#111;color:white;font-family:Meiryo, sans-serif">
 
-<h1>字幕１コラボ</h1>
+<h1>字幕コラボ</h1>
 
 <div id="role-select">
   <h2>担当を選択</h2>
@@ -30,6 +29,7 @@ let active = "A";
 let log = [];
 let myRole = null;
 
+// 並び
 function getOrder() {
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
@@ -37,17 +37,20 @@ function getOrder() {
   return ["A","B","C"];
 }
 
+// UI生成
 function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
     <div style="display:flex; gap:40px;">
+      
       <div id="columns"></div>
 
       <div>
         <h2>ログ</h2>
         <div id="log"></div>
       </div>
+
     </div>
   `;
 
@@ -61,26 +64,19 @@ function initUI() {
           style="
             width:500px;
             height:180px;
-            font-family:'Meiryo', sans-serif;
+            font-family:'Meiryo';
             font-size:24px;
             line-height:1.4;
 
+            /* ✅ 半角30〜31の間に線 */
             background-image:
               linear-gradient(
                 to right,
                 transparent 0,
-                transparent calc(15ch),
-                rgba(255,0,0,0.8) calc(15ch),
-                rgba(255,0,0,0.8) calc(15ch + 1px),
-                transparent calc(15ch + 1px)
-              ),
-              linear-gradient(
-                to right,
-                transparent 0,
-                transparent calc(15.5ch),
-                rgba(255,255,0,0.8) calc(15.5ch),
-                rgba(255,255,0,0.8) calc(15.5ch + 1px),
-                transparent calc(15.5ch + 1px)
+                transparent calc(30ch),
+                red calc(30ch),
+                red calc(30ch + 1px),
+                transparent calc(30ch + 1px)
               );
           "
         ></textarea>
@@ -101,6 +97,7 @@ function initUI() {
   updateUI();
 }
 
+// UI更新
 function updateUI() {
   ["A","B","C"].forEach(k => {
     const label = document.getElementById("label-" + k);
@@ -129,6 +126,7 @@ function updateUI() {
     log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("");
 }
 
+// 役割
 function selectRole(role) {
   myRole = role;
   document.getElementById("role-select").style.display = "none";
@@ -136,11 +134,13 @@ function selectRole(role) {
   initUI();
 }
 
+// 入力
 function typing(key, value) {
   inputs[key] = value;
   socket.emit("typing", { key, value });
 }
 
+// 送信
 function send(key) {
   if (active !== key) return;
 
@@ -156,6 +156,7 @@ function send(key) {
   updateUI();
 }
 
+// 受信
 socket.on("typing", ({ key, value }) => {
   inputs[key] = value;
   updateUI();
@@ -182,3 +183,4 @@ document.addEventListener("keydown", (e) => {
 
 </body>
 </html>
+``
