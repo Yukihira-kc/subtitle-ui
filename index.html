@@ -8,7 +8,7 @@
 
 </head>
 
-<body style="background:#111;color:white;font-family:sans-serif">
+<body style="background:#111;color:white;font-family:Meiryo, sans-serif">
 
 <h1>字幕コラボ</h1>
 
@@ -37,7 +37,7 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// ✅ UI生成（ここ修正）
+// UI生成
 function initUI() {
   const app = document.getElementById("app");
 
@@ -58,8 +58,20 @@ function initUI() {
     getOrder().map(k => `
       <div>
         <h3 id="label-${k}"></h3>
-        <textarea id="input-${k}" style="width:200px;height:100px"></textarea>
+
+        <textarea
+          id="input-${k}"
+          style="
+            width:500px;
+            height:180px;
+            font-family:'Meiryo', sans-serif;
+            font-size:24px;
+            line-height:1.4;
+          "
+        ></textarea>
+
         <br>
+
         <button id="btn-${k}">送信</button>
       </div>
     `).join("");
