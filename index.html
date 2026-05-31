@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>字幕コラボ</title>
 
-<!-- ✅ 絶対このまま -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -23,32 +22,28 @@
 <div id="app" style="display:none"></div>
 
 <script>
-
-// ✅ まずUIだけ生かす（ここ超重要）
 let socket;
 let inputs = { A:"", B:"", C:"" };
 let active = "A";
 let log = [];
 let myRole = null;
 
-// ✅ ボタンを安全に設定（onclick使わない）
+// ✅ ボタン
 document.getElementById("btnA").onclick = () => selectRole("A");
 document.getElementById("btnB").onclick = () => selectRole("B");
 document.getElementById("btnC").onclick = () => selectRole("C");
 
-// ✅ 先にUIは確実に動くようにする
 function selectRole(role) {
-  console.log("押された:", role);
-
   myRole = role;
+
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
 
   initUI();
-  connectSocket(); // 後で接続
+  connectSocket();
 }
 
-// ✅ ソケットは後からつなぐ（エラー防止）
+// socket
 function connectSocket() {
   try {
     socket = io("https://subtitle-server-czoz.onrender.com");
@@ -69,11 +64,11 @@ function connectSocket() {
     });
 
   } catch(e) {
-    console.log("socket失敗", e);
+    console.log("socket error", e);
   }
 }
 
-// ✅ 並び
+// 並び
 function getOrder() {
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
@@ -81,20 +76,17 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// ✅ UI生成
+// UI
 function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
     <div style="display:flex; gap:40px;">
-      
       <div id="columns"></div>
-
       <div>
         <h2>ログ</h2>
         <div id="log"></div>
       </div>
-
     </div>
   `;
 
@@ -113,14 +105,15 @@ function initUI() {
             font-size:24px;
             line-height:1.4;
 
+            /* ✅ ここが今回の修正 */
             background-image:
               linear-gradient(
                 to right,
                 transparent 0,
-                transparent calc(30ch),
-                red calc(30ch),
-                red calc(30ch + 1px),
-                transparent calc(30ch + 1px)
+                transparent calc(28.5ch),
+                red calc(28.5ch),
+                red calc(28.5ch + 1px),
+                transparent calc(28.5ch + 1px)
               );
           "
         ></textarea>
@@ -131,7 +124,6 @@ function initUI() {
     `).join("");
 
   ["A","B","C"].forEach(k => {
-
     document.getElementById("input-" + k).oninput = (e) => {
       typing(k, e.target.value);
     };
@@ -142,7 +134,7 @@ function initUI() {
   updateUI();
 }
 
-// ✅ UI更新
+// UI更新
 function updateUI() {
   ["A","B","C"].forEach(k => {
 
@@ -172,13 +164,13 @@ function updateUI() {
     log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("");
 }
 
-// ✅ 入力
+// 入力
 function typing(key, value) {
   inputs[key] = value;
   if (socket) socket.emit("typing", { key, value });
 }
 
-// ✅ 送信
+// 送信
 function send(key) {
   if (active !== key) return;
 
@@ -196,16 +188,14 @@ function send(key) {
   updateUI();
 }
 
-// ✅ F12送信
+// F12送信
 document.addEventListener("keydown", (e) => {
   if (e.key === "F12") {
     e.preventDefault();
     if (myRole) send(myRole);
   }
 });
-
 </script>
 
 </body>
 </html>
-``
