@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <title>字幕コラボ</title>
 
+<!-- ✅ ここが超重要：絶対にこのまま -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
 
 <body style="background:#111;color:white;font-family:Meiryo, sans-serif">
 
-<h1>字１幕コラボ</h1>
+<h1>字幕コラボ</h1>
 
 <div id="role-select">
   <h2>担当を選択</h2>
@@ -22,14 +23,11 @@
 <div id="app" style="display:none"></div>
 
 <script>
-const socket = io("https://subtitle-server-czoz.onrender.com");
 
-let inputs = { A:"", B:"", C:"" };
-let active = "A";
-let log = [];
-let myRole = null;
+// ✅ socket初期化（安全）
+let socket = null;
 
-// 並び
-function getOrder() {
-  if (myRole === "A") return ["C","A","B"];
-  if (myRole === "B") return ["A","B","C"];
+function initSocket() {
+  try {
+    socket = io("https://subtitle-server-czoz.onrender.com");
+
