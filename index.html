@@ -2,15 +2,13 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>連係ソフト</title>
+<title>字幕</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
 
 <body style="background:#111;color:white;font-family:Meiryo, sans-serif">
-
-<h1>連係しちゃうくん</h1>
 
 <div id="role-select">
   <h2>担当を選択</h2>
@@ -28,44 +26,37 @@ let active = "A";
 let log = [];
 let myRole = null;
 
-// ✅ ボタン
+// ボタン
 document.getElementById("btnA").onclick = () => selectRole("A");
 document.getElementById("btnB").onclick = () => selectRole("B");
 document.getElementById("btnC").onclick = () => selectRole("C");
 
 function selectRole(role) {
   myRole = role;
-
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
-
   initUI();
   connectSocket();
 }
 
 // socket
 function connectSocket() {
-  try {
-    socket = io("https://subtitle-server-czoz.onrender.com");
+  socket = io("https://subtitle-server-czoz.onrender.com");
 
-    socket.on("typing", ({ key, value }) => {
-      inputs[key] = value;
-      updateUI();
-    });
+  socket.on("typing", ({ key, value }) => {
+    inputs[key] = value;
+    updateUI();
+  });
 
-    socket.on("log", (data) => {
-      log.unshift(data);
-      updateUI();
-    });
+  socket.on("log", (data) => {
+    log.unshift(data);
+    updateUI();
+  });
 
-    socket.on("active", (next) => {
-      active = next;
-      updateUI();
-    });
-
-  } catch(e) {
-    console.log("socket error", e);
-  }
+  socket.on("active", (next) => {
+    active = next;
+    updateUI();
+  });
 }
 
 // 並び
@@ -76,54 +67,68 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// UI
+// UI生成
 function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
     <div style="display:flex; gap:40px;">
+      
       <div id="columns"></div>
+
       <div>
         <h2>ログ</h2>
         <div id="log"></div>
       </div>
+
     </div>
   `;
 
   document.getElementById("columns").innerHTML =
     getOrder().map(k => `
-      <div>
-        <h3 id="label-${k}"></h3>
+      <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:20px;">
+        
+        <!-- ✅ 左にA/B/C表示 -->
+        <div id="label-${k}" style="
+          font-size:24px;
+          width:40px;
+          text-align:center;
+          font-weight:bold;
+        "></div>
 
-        <textarea
-          id="input-${k}"
-          style="
-            width:500px;
-            height:180px;
+        <div>
+          <textarea
+            id="input-${k}"
+            style="
+              width:500px;
+              height:180px;
 
-            font-family: Consolas, 'Courier New', monospace;
-            font-size:24px;
-            line-height:1.4;
+              font-family: Consolas, 'Courier New', monospace;
+              font-size:24px;
+              line-height:1.4;
 
-            /* ✅ ここが今回の修正 */
-            background-image:
-              linear-gradient(
-                to right,
-                transparent 0,
-                transparent calc(28.5ch),
-                red calc(28.5ch),
-                red calc(28.5ch + 1px),
-                transparent calc(28.5ch + 1px)
-              );
-          "
-        ></textarea>
+              background-image:
+                linear-gradient(
+                  to right,
+                  transparent 0,
+                  transparent calc(28.5ch),
+                  red calc(28.5ch),
+                  red calc(28.5ch + 1px),
+                  transparent calc(28.5ch + 1px)
+                );
+            "
+          ></textarea>
 
-        <br>
-        <button id="btn-${k}">送信</button>
+          <br>
+
+          <button id="btn-${k}">送信</button>
+        </div>
+
       </div>
     `).join("");
 
   ["A","B","C"].forEach(k => {
+
     document.getElementById("input-" + k).oninput = (e) => {
       typing(k, e.target.value);
     };
@@ -142,10 +147,14 @@ function updateUI() {
     const input = document.getElementById("input-" + k);
     const btn = document.getElementById("btn-" + k);
 
-    label.textContent =
-      k +
-      (myRole === k ? "（自分）" : "") +
-      (active === k ? " ←送信可" : "");
+    // ✅ ラベル色制御（ここが今回の核心）
+    label.textContent = k;
+
+    if (active === k) {
+      label.style.color = "lime";  // 送信中（緑）
+    } else {
+      label.style.color = "white"; // 通常
+    }
 
     input.readOnly = myRole !== k;
 
@@ -195,6 +204,7 @@ document.addEventListener("keydown", (e) => {
     if (myRole) send(myRole);
   }
 });
+
 </script>
 
 </body>
