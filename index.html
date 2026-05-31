@@ -2,32 +2,36 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕コラボ</title>
+<title>テスト</title>
 
-<!-- ✅ ここが超重要：絶対にこのまま -->
+<!-- ✅ 絶対このまま -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
 
-<body style="background:#111;color:white;font-family:Meiryo, sans-serif">
+<body style="background:#111;color:white">
 
-<h1>字幕コラボ</h1>
+<h1>テスト画面</h1>
 
 <div id="role-select">
-  <h2>担当を選択</h2>
   <button onclick="selectRole('A')">A</button>
   <button onclick="selectRole('B')">B</button>
   <button onclick="selectRole('C')">C</button>
 </div>
 
-<div id="app" style="display:none"></div>
+<div id="app" style="display:none">
+  <h2 id="msg"></h2>
+</div>
 
 <script>
+function selectRole(role) {
+  console.log("クリック成功:", role);
 
-// ✅ socket初期化（安全）
-let socket = null;
+  document.getElementById("role-select").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("msg").innerText = role + "でログイン";
+}
+</script>
 
-function initSocket() {
-  try {
-    socket = io("https://subtitle-server-czoz.onrender.com");
-
+</body>
+</html>
