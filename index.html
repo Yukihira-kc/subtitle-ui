@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕コラボ</title>
+<title>字幕1コラボ</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
@@ -37,7 +37,7 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// ✅ 初期UI生成
+// ✅ UI生成
 function initUI() {
   const app = document.getElementById("app");
 
@@ -49,34 +49,35 @@ function initUI() {
     </div>
   `;
 
-  const col = document.getElementById("columns");
+  document.getElementById("columns").innerHTML =
+    getOrder().map(k => `
+      <div>
+        <h3 id="label-${k}"></h3>
 
-  col.innerHTML = getOrder().map(k => `
-    <div>
-      <h3 id="label-${k}"></h3>
-      <textarea id="input-${k}" style="width:200px;height:100px"></textarea>
-      <br>
-      <button id="btn-${k}">送信</button>
-    </div>
-  `).join("");
+        <textarea
+          id="input-${k}"
+          style="width:200px;height:100px"
+        ></textarea>
+
+        <br>
+
+        <button id="btn-${k}">送信</button>
+      </div>
+    `).join("");
 
   ["A","B","C"].forEach(k => {
+
     const input = document.getElementById("input-" + k);
     const btn = document.getElementById("btn-" + k);
 
-    input.oninput = (e) => {
-      typing(k, e.target.value);
-    };
-
-    btn.onclick = () => {
-      send(k);
-    };
+    input.oninput = (e) => typing(k, e.target.value);
+    btn.onclick = () => send(k);
   });
 
   updateUI();
 }
 
-// ✅ UI更新（重要：強制反映）
+// ✅ UI更新
 function updateUI() {
 
   ["A","B","C"].forEach(k => {
@@ -90,16 +91,20 @@ function updateUI() {
       (myRole === k ? "（自分）" : "") +
       (active === k ? " ←送信可" : "");
 
-    input.disabled = myRole !== k;
+    // ✅ 暗転なし（readonlyで制御）
+    input.readOnly = (myRole !== k);
 
-    // ✅ 他人の入力は必ず反映
+    // ✅ 見た目は普通
+    input.style.background = "#fff";
+    input.style.color = "#000";
+
+    // ✅ 値反映
     if (k !== myRole) {
       input.value = inputs[k] || "";
-    }
-
-    // ✅ 自分はカーソル壊さない範囲で更新
-    if (k === myRole && document.activeElement !== input) {
-      input.value = inputs[k] || "";
+    } else {
+      if (document.activeElement !== input) {
+        input.value = inputs[k] || "";
+      }
     }
 
     btn.disabled = !(active === k && myRole === k);
@@ -122,27 +127,18 @@ function selectRole(role) {
 // ✅ 入力
 function typing(key, value) {
   inputs[key] = value;
-
   socket.emit("typing", { key, value });
-
-  // ✅ 自分も即時反映
   updateUI();
 }
 
-// ✅ ← ここが今回の核心
+// ✅ 受信
 socket.on("typing", ({ key, value }) => {
-
-  console.log("受信:", key, value);
-
   inputs[key] = value;
-
-  // ✅ 必ず再表示（遅延なし）
   updateUI();
 });
 
 // ✅ 送信
 function send(key) {
-
   if (active !== key) return;
 
   socket.emit("send", {
@@ -156,7 +152,6 @@ function send(key) {
   });
 
   inputs[key] = "";
-
   updateUI();
 }
 
@@ -171,6 +166,20 @@ socket.on("active", (next) => {
   active = next;
   updateUI();
 });
+
+// ✅ F12送信（ここ重要）
+document.addEventListener("keydown", (e) => {
+
+  // F12を無効化（開発者ツール防止）
+  if (e.key === "F12") {
+    e.preventDefault();
+
+    if (myRole) {
+      send(myRole);
+    }
+  }
+});
+
 </script>
 
 </body>
