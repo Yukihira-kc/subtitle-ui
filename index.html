@@ -14,39 +14,15 @@
 
 <div id="role-select">
   <h2>担当を選択</h2>
-  <button id="btnA">A</button>
-  <button id="btnB">B</button>
-  <button id="btnC">C</button>
+  <button onclick="selectRole('A')">A</button>
+  <button onclick="selectRole('B')">B</button>
+  <button onclick="selectRole('C')">C</button>
 </div>
 
 <div id="app" style="display:none"></div>
 
 <script>
-
-// ✅ ソケットは後から接続（ここ重要）
-let socket = null;
-
-function connectSocket() {
-  try {
-    socket = io("https://subtitle-server-czoz.onrender.com", {
-      reconnection: true,
-      timeout: 5000
-    });
-
-    socket.on("connect", () => {
-      console.log("サーバー接続成功");
-    });
-
-    socket.on("connect_error", () => {
-      console.log("接続エラー（起動待ち）");
-    });
-
-  } catch (e) {
-    console.log("socket初期化失敗", e);
-  }
-}
-
-connectSocket();
+const socket = io("https://subtitle-server-czoz.onrender.com");
 
 let inputs = { A:"", B:"", C:"" };
 let active = "A";
@@ -55,129 +31,146 @@ let myRole = null;
 
 // ✅ 並び順
 function getOrder() {
-  if (myRole === "A") return ["C", "A", "B"];
-  if (myRole === "B") return ["A", "B", "C"];
-  if (myRole === "C") return ["B", "C", "A"];
-  return ["A", "B", "C"];
+  if (myRole === "A") return ["C","A","B"];
+  if (myRole === "B") return ["A","B","C"];
+  if (myRole === "C") return ["B","C","A"];
+  return ["A","B","C"];
 }
 
-// ✅ ボタンイベント（エラー防止でJS側に書く）
-window.onload = () => {
-  document.getElementById("btnA").onclick = () => selectRole("A");
-  document.getElementById("btnB").onclick = () => selectRole("B");
-  document.getElementById("btnC").onclick = () => selectRole("C");
-};
+// ✅ 初期UI生成
+function initUI() {
+  const app = document.getElementById("app");
 
-// ✅ 役割選択（ここが止まってた）
+  app.innerHTML = `
+    <div id="columns"></div>
+    <div>
+      <h2>ログ</h2>
+      <div id="log"></div>
+    </div>
+  `;
+
+  const col = document.getElementById("columns");
+
+  col.innerHTML = getOrder().map(k => `
+    <div>
+      <h3 id="label-${k}"></h3>
+      <textarea id="input-${k}" style="width:200px;height:100px"></textarea>
+      <br>
+      <button id="btn-${k}">送信</button>
+    </div>
+  `).join("");
+
+  ["A","B","C"].forEach(k => {
+    const input = document.getElementById("input-" + k);
+    const btn = document.getElementById("btn-" + k);
+
+    input.oninput = (e) => {
+      typing(k, e.target.value);
+    };
+
+    btn.onclick = () => {
+      send(k);
+    };
+  });
+
+  updateUI();
+}
+
+// ✅ UI更新（重要：強制反映）
+function updateUI() {
+
+  ["A","B","C"].forEach(k => {
+
+    const label = document.getElementById("label-" + k);
+    const input = document.getElementById("input-" + k);
+    const btn = document.getElementById("btn-" + k);
+
+    label.textContent =
+      k +
+      (myRole === k ? "（自分）" : "") +
+      (active === k ? " ←送信可" : "");
+
+    input.disabled = myRole !== k;
+
+    // ✅ 他人の入力は必ず反映
+    if (k !== myRole) {
+      input.value = inputs[k] || "";
+    }
+
+    // ✅ 自分はカーソル壊さない範囲で更新
+    if (k === myRole && document.activeElement !== input) {
+      input.value = inputs[k] || "";
+    }
+
+    btn.disabled = !(active === k && myRole === k);
+  });
+
+  document.getElementById("log").innerHTML =
+    log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("");
+}
+
+// ✅ 役割選択
 function selectRole(role) {
-  console.log("選択:", role);
-
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
 
-  render();
-}
-
-// ✅ 描画
-function render() {
-  const app = document.getElementById("app");
-
-  app.innerHTML = `
-    <div style="display:flex;gap:20px">
-      <div>
-        ${getOrder().map(k => `
-          <div>
-            <h3>
-              ${k}
-              ${myRole === k ? "(自分)" : ""}
-              ${active === k ? " ←送信可" : ""}
-            </h3>
-
-            <textarea
-              id="input-${k}"
-              ${myRole !== k ? "disabled" : ""}
-              style="width:200px;height:100px"
-              oninput="typing('${k}', this.value)"
-            ></textarea>
-
-            <br>
-
-            <button
-              onclick="send('${k}')"
-              ${active !== k || myRole !== k ? "disabled" : ""}
-            >
-              送信
-            </button>
-          </div>
-        `).join("")}
-      </div>
-
-      <div>
-        <h2>ログ</h2>
-        ${log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("")}
-      </div>
-    </div>
-  `;
-
-  ["A","B","C"].forEach(k => {
-    const el = document.getElementById("input-" + k);
-    if (el && document.activeElement !== el) {
-      el.value = inputs[k];
-    }
-  });
+  initUI();
 }
 
 // ✅ 入力
 function typing(key, value) {
   inputs[key] = value;
-  if (socket) socket.emit("typing", { key, value });
+
+  socket.emit("typing", { key, value });
+
+  // ✅ 自分も即時反映
+  updateUI();
 }
+
+// ✅ ← ここが今回の核心
+socket.on("typing", ({ key, value }) => {
+
+  console.log("受信:", key, value);
+
+  inputs[key] = value;
+
+  // ✅ 必ず再表示（遅延なし）
+  updateUI();
+});
 
 // ✅ 送信
 function send(key) {
 
   if (active !== key) return;
 
-  if (socket) {
-    socket.emit("send", {
-      key,
-      text: inputs[key]
-    });
+  socket.emit("send", {
+    key,
+    text: inputs[key]
+  });
 
-    socket.emit("typing", {
-      key,
-      value: ""
-    });
-  }
+  socket.emit("typing", {
+    key,
+    value: ""
+  });
 
   inputs[key] = "";
 
-  setTimeout(render, 10);
+  updateUI();
 }
 
-// ✅ 受信（安全）
-if (socket) {
+// ✅ ログ
+socket.on("log", (data) => {
+  log.unshift(data);
+  updateUI();
+});
 
-  socket.on("typing", ({ key, value }) => {
-    inputs[key] = value;
-  });
-
-  socket.on("log", (data) => {
-    log.unshift(data);
-    setTimeout(render, 10);
-  });
-
-  socket.on("active", (next) => {
-    active = next;
-    setTimeout(render, 10);
-  });
-
-}
-
-render();
-
+// ✅ 送信権
+socket.on("active", (next) => {
+  active = next;
+  updateUI();
+});
 </script>
 
 </body>
