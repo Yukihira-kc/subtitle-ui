@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕コラボ</title>
+<title>字幕</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
@@ -83,7 +83,7 @@ function initUI() {
         <div id="log"></div>
       </div>
 
-      <!-- ✅ 検索表示 -->
+      <!-- 検索 -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
@@ -115,6 +115,17 @@ function initUI() {
             height:180px;
             font-family: Consolas, monospace;
             font-size:24px;
+
+            /* ✅ 縦線復活（ここ） */
+            background-image:
+              linear-gradient(
+                to right,
+                transparent 0,
+                transparent calc(28.5ch),
+                red calc(28.5ch),
+                red calc(28.5ch + 1px),
+                transparent calc(28.5ch + 1px)
+              );
           "
         ></textarea>
 
@@ -166,7 +177,7 @@ function typing(key, value) {
   if (socket) socket.emit("typing", { key, value });
 }
 
-// ✅ 🔥 F4検索（Bing）
+// ✅ F4検索（Bing）
 document.addEventListener("keydown", (e) => {
 
   if (e.key === "F4") {
@@ -192,6 +203,6 @@ document.addEventListener("keydown", (e) => {
 });
 
 </script>
-
 </body>
 </html>
+``
