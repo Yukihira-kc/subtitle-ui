@@ -83,7 +83,7 @@ function initUI() {
         <div id="log"></div>
       </div>
 
-      <!-- ✅ 検索結果表示 -->
+      <!-- ✅ 検索表示 -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
@@ -166,7 +166,7 @@ function typing(key, value) {
   if (socket) socket.emit("typing", { key, value });
 }
 
-// ✅ 🔥 検索機能（F4）
+// ✅ 🔥 F4検索（Bing）
 document.addEventListener("keydown", (e) => {
 
   if (e.key === "F4") {
@@ -184,10 +184,9 @@ document.addEventListener("keydown", (e) => {
     const selectedText = input.value.substring(start, end);
 
     const url =
-      "https://www.google.com/search?q=" +
+      "https://www.bing.com/search?q=" +
       encodeURIComponent(selectedText);
 
-    // ✅ 右のiframeに表示
     document.getElementById("searchFrame").src = url;
   }
 });
