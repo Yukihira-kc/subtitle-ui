@@ -72,13 +72,23 @@ function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
-    <div style="display:flex; gap:40px;">
+    <div style="display:flex; gap:20px;">
       
+      <!-- 入力 -->
       <div id="columns"></div>
 
+      <!-- ログ -->
       <div>
-        <h2>ログ</h2>
+        <h3>ログ</h3>
         <div id="log"></div>
+      </div>
+
+      <!-- ✅ 検索結果表示 -->
+      <div>
+        <h3>検索</h3>
+        <iframe id="searchFrame"
+          style="width:400px; height:300px; border:1px solid white;"
+        ></iframe>
       </div>
 
     </div>
@@ -88,47 +98,25 @@ function initUI() {
     getOrder().map(k => `
       <div style="display:flex; gap:10px; margin-bottom:20px;">
         
-        <!-- ✅ ラベル（高さ拡張） -->
         <div id="label-${k}" style="
           width:40px;
-          height:180px; /* ←ここ重要 */
-
+          height:180px;
           display:flex;
           align-items:center;
           justify-content:center;
-
-          font-size:22px;
-          font-weight:bold;
-
           border-radius:6px;
+          font-weight:bold;
         "></div>
 
-        <div>
-          <textarea
-            id="input-${k}"
-            style="
-              width:500px;
-              height:180px;
-
-              font-family: Consolas, 'Courier New', monospace;
-              font-size:24px;
-              line-height:1.4;
-
-              background-image:
-                linear-gradient(
-                  to right,
-                  transparent 0,
-                  transparent calc(28.5ch),
-                  red calc(28.5ch),
-                  red calc(28.5ch + 1px),
-                  transparent calc(28.5ch + 1px)
-                );
-            "
-          ></textarea>
-
-          <br>
-          <button id="btn-${k}">送信</button>
-        </div>
+        <textarea
+          id="input-${k}"
+          style="
+            width:500px;
+            height:180px;
+            font-family: Consolas, monospace;
+            font-size:24px;
+          "
+        ></textarea>
 
       </div>
     `).join("");
@@ -137,8 +125,6 @@ function initUI() {
     document.getElementById("input-" + k).oninput = (e) => {
       typing(k, e.target.value);
     };
-
-    document.getElementById("btn-" + k).onclick = () => send(k);
   });
 
   updateUI();
@@ -150,17 +136,13 @@ function updateUI() {
 
     const label = document.getElementById("label-" + k);
     const input = document.getElementById("input-" + k);
-    const btn = document.getElementById("btn-" + k);
 
     label.textContent = k;
 
-    // ✅ 背景色
     if (active === k) {
       label.style.backgroundColor = "#00aa00";
-      label.style.color = "#fff";
     } else {
       label.style.backgroundColor = "#555";
-      label.style.color = "#fff";
     }
 
     input.readOnly = myRole !== k;
@@ -172,12 +154,10 @@ function updateUI() {
         input.value = inputs[k] || "";
       }
     }
-
-    btn.disabled = !(active === k && myRole === k);
   });
 
   document.getElementById("log").innerHTML =
-    log.map(l => `<div>[${l.key}] ${l.text}</div>`).join("");
+    log.map(l => `<div>${l.text}</div>`).join("");
 }
 
 // 入力
@@ -186,31 +166,32 @@ function typing(key, value) {
   if (socket) socket.emit("typing", { key, value });
 }
 
-// 送信
-function send(key) {
-  if (active !== key) return;
-
-  const inputEl = document.getElementById("input-" + key);
-  if (inputEl) inputEl.value = "";
-
-  const text = inputs[key];
-  inputs[key] = "";
-
-  if (socket) {
-    socket.emit("send", { key, text });
-    socket.emit("typing", { key, value: "" });
-  }
-
-  updateUI();
-}
-
-// F12送信
+// ✅ 🔥 検索機能（F4）
 document.addEventListener("keydown", (e) => {
-  if (e.key === "F12") {
+
+  if (e.key === "F4") {
     e.preventDefault();
-    if (myRole) send(myRole);
+
+    if (!myRole) return;
+
+    const input = document.getElementById("input-" + myRole);
+
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+
+    if (start === end) return;
+
+    const selectedText = input.value.substring(start, end);
+
+    const url =
+      "https://www.google.com/search?q=" +
+      encodeURIComponent(selectedText);
+
+    // ✅ 右のiframeに表示
+    document.getElementById("searchFrame").src = url;
   }
 });
+
 </script>
 
 </body>
