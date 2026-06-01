@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕</title>
+<title>字幕コラボ</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
@@ -26,7 +26,7 @@ let active = "A";
 let log = [];
 let myRole = null;
 
-// ボタン
+// ✅ ボタン
 document.getElementById("btnA").onclick = () => selectRole("A");
 document.getElementById("btnB").onclick = () => selectRole("B");
 document.getElementById("btnC").onclick = () => selectRole("C");
@@ -39,7 +39,7 @@ function selectRole(role) {
   connectSocket();
 }
 
-// socket
+// ✅ socket
 function connectSocket() {
   socket = io("https://subtitle-server-czoz.onrender.com");
 
@@ -59,7 +59,7 @@ function connectSocket() {
   });
 }
 
-// 並び
+// ✅ 並び
 function getOrder() {
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
@@ -67,7 +67,7 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// UI生成
+// ✅ UI生成
 function initUI() {
   const app = document.getElementById("app");
 
@@ -83,11 +83,15 @@ function initUI() {
         <div id="log"></div>
       </div>
 
-      <!-- 検索 -->
+      <!-- ✅ 検索ウィンドウ -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
-          style="width:400px; height:300px; border:1px solid white;"
+          style="
+            width:600px;
+            height:400px;
+            border:1px solid white;
+          "
         ></iframe>
       </div>
 
@@ -98,25 +102,32 @@ function initUI() {
     getOrder().map(k => `
       <div style="display:flex; gap:10px; margin-bottom:20px;">
         
+        <!-- ✅ ラベル -->
         <div id="label-${k}" style="
           width:40px;
           height:180px;
+
           display:flex;
           align-items:center;
           justify-content:center;
+
           border-radius:6px;
           font-weight:bold;
+          color:#fff;
         "></div>
 
+        <!-- ✅ テキストボックス -->
         <textarea
           id="input-${k}"
           style="
             width:500px;
             height:180px;
+
             font-family: Consolas, monospace;
             font-size:24px;
+            line-height:1.4;
 
-            /* ✅ 縦線復活（ここ） */
+            /* ✅ 縦線（28.5ch） */
             background-image:
               linear-gradient(
                 to right,
@@ -141,7 +152,7 @@ function initUI() {
   updateUI();
 }
 
-// UI更新
+// ✅ UI更新
 function updateUI() {
   ["A","B","C"].forEach(k => {
 
@@ -150,6 +161,7 @@ function updateUI() {
 
     label.textContent = k;
 
+    // ✅ ラベル背景色
     if (active === k) {
       label.style.backgroundColor = "#00aa00";
     } else {
@@ -171,10 +183,36 @@ function updateUI() {
     log.map(l => `<div>${l.text}</div>`).join("");
 }
 
-// 入力
+// ✅ 入力
 function typing(key, value) {
   inputs[key] = value;
   if (socket) socket.emit("typing", { key, value });
+}
+
+// ✅ F12送信
+document.addEventListener("keydown", (e) => {
+  if (e.key === "F12") {
+    e.preventDefault();
+    if (myRole && active === myRole) {
+      send(myRole);
+    }
+  }
+});
+
+// ✅ 送信
+function send(key) {
+  const inputEl = document.getElementById("input-" + key);
+  if (inputEl) inputEl.value = "";
+
+  const text = inputs[key];
+  inputs[key] = "";
+
+  if (socket) {
+    socket.emit("send", { key, text });
+    socket.emit("typing", { key, value: "" });
+  }
+
+  updateUI();
 }
 
 // ✅ F4検索（Bing）
@@ -205,4 +243,3 @@ document.addEventListener("keydown", (e) => {
 </script>
 </body>
 </html>
-``
