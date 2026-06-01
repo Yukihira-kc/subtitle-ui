@@ -86,17 +86,20 @@ function initUI() {
 
   document.getElementById("columns").innerHTML =
     getOrder().map(k => `
-      <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:20px;">
+      <div style="display:flex; gap:10px; margin-bottom:20px;">
         
-        <!-- ✅ ラベル（背景付き） -->
+        <!-- ✅ ラベル（高さ拡張） -->
         <div id="label-${k}" style="
           width:40px;
-          height:40px;
+          height:180px; /* ←ここ重要 */
+
           display:flex;
           align-items:center;
           justify-content:center;
-          font-size:20px;
+
+          font-size:22px;
           font-weight:bold;
+
           border-radius:6px;
         "></div>
 
@@ -124,7 +127,6 @@ function initUI() {
           ></textarea>
 
           <br>
-
           <button id="btn-${k}">送信</button>
         </div>
 
@@ -150,16 +152,15 @@ function updateUI() {
     const input = document.getElementById("input-" + k);
     const btn = document.getElementById("btn-" + k);
 
-    // ✅ ラベル表示
     label.textContent = k;
 
-    // ✅ 背景色制御（ここが今回の変更）
+    // ✅ 背景色
     if (active === k) {
-      label.style.backgroundColor = "#00aa00"; // 緑
-      label.style.color = "white";
+      label.style.backgroundColor = "#00aa00";
+      label.style.color = "#fff";
     } else {
-      label.style.backgroundColor = "#555"; // グレー
-      label.style.color = "white";
+      label.style.backgroundColor = "#555";
+      label.style.color = "#fff";
     }
 
     input.readOnly = myRole !== k;
@@ -210,7 +211,6 @@ document.addEventListener("keydown", (e) => {
     if (myRole) send(myRole);
   }
 });
-
 </script>
 
 </body>
