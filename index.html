@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>字幕コラボ</title>
 
+<!-- ✅ ここ絶対このまま -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -26,7 +27,7 @@ let active = "A";
 let log = [];
 let myRole = null;
 
-// ボタン
+// ✅ DOM読み込み後に設定
 window.onload = () => {
   document.getElementById("btnA").onclick = () => selectRole("A");
   document.getElementById("btnB").onclick = () => selectRole("B");
@@ -34,6 +35,8 @@ window.onload = () => {
 };
 
 function selectRole(role) {
+  console.log("選択:", role); // ✅ 動作確認用
+
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -43,27 +46,32 @@ function selectRole(role) {
   connectSocket();
 }
 
-// socket
+// ✅ socket
 function connectSocket() {
-  socket = io("https://subtitle-server-czoz.onrender.com");
+  try {
+    socket = io("https://subtitle-server-czoz.onrender.com");
 
-  socket.on("typing", ({ key, value }) => {
-    inputs[key] = value;
-    updateUI();
-  });
+    socket.on("typing", ({ key, value }) => {
+      inputs[key] = value;
+      updateUI();
+    });
 
-  socket.on("log", (data) => {
-    log.push(data); // ✅ 下に追加
-    updateUI();
-  });
+    socket.on("log", (data) => {
+      log.push(data);
+      updateUI();
+    });
 
-  socket.on("active", (next) => {
-    active = next;
-    updateUI();
-  });
+    socket.on("active", (next) => {
+      active = next;
+      updateUI();
+    });
+
+  } catch (e) {
+    console.log("socket error", e);
+  }
 }
 
-// 並び
+// ✅ 並び
 function getOrder() {
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
@@ -71,37 +79,23 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// UI
+// ✅ UI
 function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
     <div style="display:flex; gap:20px;">
       
-      <!-- 入力 -->
       <div id="columns"></div>
 
-      <!-- ✅ ログ（幅固定・15.5文字） -->
-      <div style="
-        width:31ch;
-        font-family: Consolas, monospace;
-      ">
+      <div style="width:31ch; font-family:Consolas, monospace;">
         <h3>ログ</h3>
-        <div id="log" style="
-          border:1px solid white;
-          height:400px;
-          overflow:auto;
-          padding:8px;
-          white-space:pre-wrap;
-        "></div>
+        <div id="log" style="border:1px solid white;height:400px;overflow:auto;padding:8px;"></div>
       </div>
 
-      <!-- 検索 -->
       <div>
         <h3>検索</h3>
-        <iframe id="searchFrame"
-          style="width:600px; height:400px; border:1px solid white;"
-        ></iframe>
+        <iframe id="searchFrame" style="width:600px;height:400px;border:1px solid white;"></iframe>
       </div>
 
     </div>
@@ -127,7 +121,7 @@ function initUI() {
           style="
             width:500px;
             height:180px;
-            font-family: Consolas, monospace;
+            font-family:Consolas, monospace;
             font-size:24px;
             line-height:1.4;
 
@@ -142,46 +136,62 @@ function initUI() {
               );
           "
         ></textarea>
-
       </div>
     `).join("");
 
   ["A","B","C"].forEach(k => {
     document.getElementById("input-" + k).oninput = (e) => {
-      typing(k, e.target.value);
+      inputs[k] = e.target.value;
     };
   });
 
   updateUI();
 }
 
-// 更新
+// ✅ UI更新
 function updateUI() {
   ["A","B","C"].forEach(k => {
-
     const label = document.getElementById("label-" + k);
     const input = document.getElementById("input-" + k);
 
     if (!label || !input) return;
 
     label.textContent = k;
-
-    label.style.backgroundColor =
-      active === k ? "#00aa00" : "#555";
+    label.style.backgroundColor = active === k ? "#00aa00" : "#555";
 
     input.readOnly = myRole !== k;
-
-    if (k !== myRole) {
-      input.value = inputs[k] || "";
-    } else {
-      if (document.activeElement !== input) {
-        input.value = inputs[k] || "";
-      }
-    }
   });
 
   const logEl = document.getElementById("log");
-
   if (logEl) {
-    logEl.innerHTML = log.map(l => l.text).join("\n");
+    logEl.innerHTML = log.map(l => l.text).join("<br>");
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+}
 
+// ✅ F4検索
+document.addEventListener("keydown", (e) => {
+  if (e.key === "F4") {
+    e.preventDefault();
+
+    const input = document.getElementById("input-" + myRole);
+    const frame = document.getElementById("searchFrame");
+
+    if (!input || !frame) return;
+
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+
+    if (start === end) return;
+
+    const text = input.value.substring(start, end);
+
+    frame.src =
+      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q=" +
+      encodeURIComponent(text);
+  }
+});
+</script>
+
+</body>
+</html>
