@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕えコラボ</title>
+<title>字幕コラボ</title>
 
-<!-- ✅ 絶対に壊さない -->
+<!-- ✅ ここ絶対壊さない -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -54,7 +54,7 @@ function connectSocket() {
   });
 
   socket.on("log", (data) => {
-    log.push(data);
+    log.push(data); // ✅ 下に追加
     updateUI();
   });
 
@@ -72,18 +72,20 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// ✅ UI
+// ✅ UI生成
 function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
     <div style="display:flex; gap:20px;">
       
-      <!-- 入力 -->
       <div id="columns"></div>
 
-      <!-- ログ -->
-      <div style="width:31ch; font-family:Consolas, monospace;">
+      <!-- ✅ ログ（幅固定＋改良版） -->
+      <div style="
+        width:31ch;
+        font-family: Consolas, monospace;
+      ">
         <h3>ログ</h3>
         <div id="log" style="
           border:1px solid white;
@@ -94,11 +96,11 @@ function initUI() {
         "></div>
       </div>
 
-      <!-- 検索 -->
+      <!-- ✅ 検索 -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
-          style="width:600px;height:400px;border:1px solid white;"
+          style="width:600px; height:400px; border:1px solid white;"
         ></iframe>
       </div>
 
@@ -125,7 +127,7 @@ function initUI() {
           style="
             width:500px;
             height:180px;
-            font-family:Consolas, monospace;
+            font-family: Consolas, monospace;
             font-size:24px;
             line-height:1.4;
 
@@ -140,6 +142,7 @@ function initUI() {
               );
           "
         ></textarea>
+
       </div>
     `).join("");
 
@@ -155,20 +158,25 @@ function initUI() {
 // ✅ UI更新
 function updateUI() {
   ["A","B","C"].forEach(k => {
+
     const label = document.getElementById("label-" + k);
     const input = document.getElementById("input-" + k);
 
     if (!label || !input) return;
 
     label.textContent = k;
-    label.style.backgroundColor = active === k ? "#00aa00" : "#555";
+    label.style.backgroundColor =
+      active === k ? "#00aa00" : "#555";
 
     input.readOnly = myRole !== k;
   });
 
   const logEl = document.getElementById("log");
+
   if (logEl) {
-    logEl.innerHTML = log.map(l => l.text).join("<br>");
+    logEl.innerHTML = log.map(l => l.text).join("\n");
+
+    // ✅ 常に最新を表示
     logEl.scrollTop = logEl.scrollHeight;
   }
 }
@@ -189,25 +197,15 @@ function send(key) {
   updateUI();
 }
 
-// ✅ 🔥 F12送信（keyup＋フォーカス限定）
-document.addEventListener("keyup", (e) => {
-
+// ✅ 🔥 F12送信（ここは絶対変更していない）
+document.addEventListener("keydown", (e) => {
   if (e.key === "F12") {
-
-    const activeEl = document.activeElement;
-
-    // ✅ テキストエリア限定
-    if (!activeEl || activeEl.tagName !== "TEXTAREA") return;
-
     e.preventDefault();
-
-    if (myRole && active === myRole) {
-      send(myRole);
-    }
+    if (myRole && active === myRole) send(myRole);
   }
 });
 
-// ✅ F4検索
+// ✅ F4検索（Bing軽量版）
 document.addEventListener("keydown", (e) => {
 
   if (e.key === "F4") {
@@ -216,20 +214,21 @@ document.addEventListener("keydown", (e) => {
     if (!myRole) return;
 
     const input = document.getElementById("input-" + myRole);
-    const frame = document.getElementById("searchFrame");
-
-    if (!input || !frame) return;
+    if (!input) return;
 
     const start = input.selectionStart;
     const end = input.selectionEnd;
 
     if (start === end) return;
 
-    const text = input.value.substring(start, end);
+    const selectedText = input.value.substring(start, end);
+
+    const frame = document.getElementById("searchFrame");
+    if (!frame) return;
 
     frame.src =
       "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q=" +
-      encodeURIComponent(text);
+      encodeURIComponent(selectedText);
   }
 });
 
