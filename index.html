@@ -26,7 +26,7 @@ let active = "A";
 let log = [];
 let myRole = null;
 
-// ✅ ボタン（確実にDOM後に実行）
+// ボタン
 window.onload = () => {
   document.getElementById("btnA").onclick = () => selectRole("A");
   document.getElementById("btnB").onclick = () => selectRole("B");
@@ -53,7 +53,7 @@ function connectSocket() {
   });
 
   socket.on("log", (data) => {
-    log.unshift(data);
+    log.push(data); // ✅ 下に追加
     updateUI();
   });
 
@@ -71,17 +71,19 @@ function getOrder() {
   return ["A","B","C"];
 }
 
-// UI生成
+// UI
 function initUI() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
     <div style="display:flex; gap:20px;">
       
+      <!-- 入力 -->
       <div id="columns"></div>
 
+      <!-- ✅ ログ（幅固定・15.5文字） -->
       <div style="
-        width:34ch;
+        width:31ch;
         font-family: Consolas, monospace;
       ">
         <h3>ログ</h3>
@@ -94,8 +96,9 @@ function initUI() {
         "></div>
       </div>
 
+      <!-- 検索 -->
       <div>
-        <h3>検索 選択中の文字列をF4で検索</h3>
+        <h3>検索</h3>
         <iframe id="searchFrame"
           style="width:600px; height:400px; border:1px solid white;"
         ></iframe>
@@ -159,7 +162,7 @@ function updateUI() {
     const label = document.getElementById("label-" + k);
     const input = document.getElementById("input-" + k);
 
-    if (!label || !input) return; // ✅ 安全ガード
+    if (!label || !input) return;
 
     label.textContent = k;
 
@@ -178,68 +181,7 @@ function updateUI() {
   });
 
   const logEl = document.getElementById("log");
+
   if (logEl) {
     logEl.innerHTML = log.map(l => l.text).join("\n");
-  }
-}
 
-// 入力
-function typing(key, value) {
-  inputs[key] = value;
-  if (socket) socket.emit("typing", { key, value });
-}
-
-// F12送信
-document.addEventListener("keydown", (e) => {
-  if (e.key === "F12") {
-    e.preventDefault();
-    if (myRole && active === myRole) send(myRole);
-  }
-});
-
-function send(key) {
-  const text = inputs[key] || "";
-
-  inputs[key] = "";
-  const el = document.getElementById("input-" + key);
-  if (el) el.value = "";
-
-  if (socket) {
-    socket.emit("send", { key, text });
-    socket.emit("typing", { key, value: "" });
-  }
-
-  updateUI();
-}
-
-// ✅ F4検索（エラー止め）
-document.addEventListener("keydown", (e) => {
-
-  if (e.key === "F4") {
-    e.preventDefault();
-
-    if (!myRole) return;
-
-    const input = document.getElementById("input-" + myRole);
-    if (!input) return;
-
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-
-    if (start === end) return;
-
-    const selectedText = input.value.substring(start, end);
-
-    const frame = document.getElementById("searchFrame");
-    if (!frame) return; // ✅ ここが重要
-
-    frame.src =
-      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q=" +
-      encodeURIComponent(selectedText);
-  }
-});
-
-</script>
-</body>
-</html>
-``
