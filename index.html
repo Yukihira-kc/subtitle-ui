@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕</title>
+<title>字幕コラボ</title>
 
-<!-- ✅ 壊さない -->
+<!-- ✅ ここが命：絶対このまま -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -35,9 +35,10 @@ window.onload = () => {
 };
 
 function selectRole(role) {
+  console.log("選択:", role); // 確認用
   myRole = role;
-  role-select.style.display = "none";
-  app.style.display = "block";
+  document.getElementById("role-select").style.display = "none";
+  document.getElementById("app").style.display = "block";
   initUI();
   connectSocket();
 }
@@ -75,11 +76,7 @@ function initUI() {
       
       <div id="columns"></div>
 
-      <!-- ✅ 修正：32ch -->
-      <div style="
-        width:32ch;
-        font-family: Consolas, monospace;
-      ">
+      <div style="width:32ch; font-family:Consolas, monospace;">
         <h3>ログ</h3>
         <div id="log" style="
           border:1px solid white;
@@ -93,8 +90,7 @@ function initUI() {
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
-          style="width:600px;height:400px;border:1px solid white;">
-        </iframe>
+          style="width:600px;height:400px;border:1px solid white;"></iframe>
       </div>
 
     </div>
@@ -135,7 +131,6 @@ function initUI() {
               );
           "
         ></textarea>
-
       </div>
     `).join("");
 
@@ -159,7 +154,8 @@ function updateUI() {
     input.readOnly = myRole !== k;
   });
 
-  if (logEl = document.getElementById("log")) {
+  const logEl = document.getElementById("log");
+  if (logEl) {
     logEl.innerHTML = log.map(l => l.text).join("\n");
     logEl.scrollTop = logEl.scrollHeight;
   }
@@ -176,7 +172,7 @@ function send(key) {
   updateUI();
 }
 
-// ✅ F12そのまま維持
+// ✅ F12（元のまま）
 document.addEventListener("keydown", e => {
   if (e.key === "F12") {
     e.preventDefault();
@@ -208,3 +204,4 @@ document.addEventListener("keydown", e => {
 
 </body>
 </html>
+``
