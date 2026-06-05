@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕１コラボ</title>
+<title>字幕コラボ</title>
 
-<!-- ✅ ここ絶対に壊さない -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -21,9 +20,6 @@
 <div id="app" style="display:none"></div>
 
 <script>
-// ----------------
-// 状態
-// ----------------
 let socket;
 let inputs = { A:"", B:"", C:"" };
 let active = "A";
@@ -31,7 +27,7 @@ let log = [];
 let myRole = null;
 
 // ----------------
-// 初期ボタン
+// ボタン
 // ----------------
 window.onload = () => {
   document.getElementById("btnA").onclick = () => selectRole("A");
@@ -39,44 +35,34 @@ window.onload = () => {
   document.getElementById("btnC").onclick = () => selectRole("C");
 };
 
-// ----------------
-// 役割選択
-// ----------------
 function selectRole(role) {
   myRole = role;
-
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
-
   initUI();
   connectSocket();
 }
 
 // ----------------
-// socket接続
+// socket
 // ----------------
 function connectSocket() {
-  try {
-    socket = io("https://subtitle-server-czoz.onrender.com");
+  socket = io("https://subtitle-server-czoz.onrender.com");
 
-    socket.on("typing", ({ key, value }) => {
-      inputs[key] = value;
-      updateUI();
-    });
+  socket.on("typing", ({ key, value }) => {
+    inputs[key] = value;
+    updateUI();
+  });
 
-    socket.on("log", (data) => {
-      log.push(data); // ✅ 下に追加
-      updateUI();
-    });
+  socket.on("log", (data) => {
+    log.push(data);
+    updateUI();
+  });
 
-    socket.on("active", (next) => {
-      active = next;
-      updateUI();
-    });
-
-  } catch(e) {
-    console.log("socket error", e);
-  }
+  socket.on("active", (next) => {
+    active = next;
+    updateUI();
+  });
 }
 
 // ----------------
@@ -90,6 +76,29 @@ function getOrder() {
 }
 
 // ----------------
+// ✅ ログ整形（15.5文字対応）
+// ----------------
+function formatLogText(text) {
+  const max = 31; // 15.5文字（全角基準）
+  let count = 0;
+  let result = "";
+
+  for (let char of text) {
+    const isHalf = char.match(/[ -~]/);
+    count += isHalf ? 1 : 2;
+
+    result += char;
+
+    if (count >= max) {
+      result += "\n";
+      count = 0;
+    }
+  }
+
+  return result;
+}
+
+// ----------------
 // UI生成
 // ----------------
 function initUI() {
@@ -100,13 +109,13 @@ function initUI() {
       
       <div id="columns"></div>
 
-      <!-- ✅ ログ（32ch） -->
+      <!-- ✅ ログ -->
       <div style="width:32ch; font-family:Consolas, monospace;">
         <h3>ログ</h3>
         <div id="log" style="
           border:1px solid white;
           height:400px;
-          overflow:auto;
+          overflow-y: scroll;  /* ✅ 固定 */
           padding:8px;
           white-space:pre-wrap;
         "></div>
@@ -123,7 +132,6 @@ function initUI() {
     </div>
   `;
 
-  // 入力欄生成
   document.getElementById("columns").innerHTML =
     getOrder().map(k => `
       <div style="display:flex; gap:10px; margin-bottom:20px;">
@@ -159,6 +167,7 @@ function initUI() {
               );
           "
         ></textarea>
+
       </div>
     `).join("");
 
@@ -173,12 +182,11 @@ function initUI() {
 }
 
 // ----------------
-// 更新
+// UI更新
 // ----------------
 function updateUI() {
 
   ["A","B","C"].forEach(k => {
-
     const label = document.getElementById("label-" + k);
     const input = document.getElementById("input-" + k);
 
@@ -190,18 +198,17 @@ function updateUI() {
 
     input.readOnly = myRole !== k;
 
-    // ✅ 自分以外は強制反映
     if (k !== myRole) {
       input.value = inputs[k] || "";
     }
   });
 
-  // ✅ ログ表示
   const logEl = document.getElementById("log");
-  if (logEl) {
-    logEl.innerHTML = log.map(l => l.text).join("\n");
 
-    // ✅ 強制スクロール
+  if (logEl) {
+    logEl.innerHTML = log.map(l => formatLogText(l.text)).join("\n");
+
+    // ✅ 常に最新表示
     logEl.scrollTop = logEl.scrollHeight;
   }
 }
@@ -225,14 +232,12 @@ function send(key) {
 }
 
 // ----------------
-// ✅ F12（元仕様維持）
+// ✅ F12送信（元仕様維持）
 // ----------------
 document.addEventListener("keydown", (e) => {
   if (e.key === "F12") {
     e.preventDefault();
-    if (myRole && active === myRole) {
-      send(myRole);
-    }
+    if (myRole && active === myRole) send(myRole);
   }
 });
 
@@ -265,6 +270,5 @@ document.addEventListener("keydown", (e) => {
 });
 
 </script>
-
 </body>
 </html>
