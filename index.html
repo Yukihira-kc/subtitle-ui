@@ -5,7 +5,6 @@
 <title>字幕コラボ</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
 </head>
 
 <body style="background:#111;color:white;font-family:Meiryo, sans-serif">
@@ -31,18 +30,26 @@ let log = [];
 let myRole = null;
 
 // ----------------
-// ✅ 安全初期化
+// ✅ 安定初期化（絶対安全）
 // ----------------
-window.addEventListener("load", () => {
-  document.getElementById("btnA").onclick = () => selectRole("A");
-  document.getElementById("btnB").onclick = () => selectRole("B");
-  document.getElementById("btnC").onclick = () => selectRole("C");
+window.addEventListener("DOMContentLoaded", () => {
+
+  document.getElementById("btnA")
+    .addEventListener("click", () => selectRole("A"));
+
+  document.getElementById("btnB")
+    .addEventListener("click", () => selectRole("B"));
+
+  document.getElementById("btnC")
+    .addEventListener("click", () => selectRole("C"));
+
 });
 
 // ----------------
 // 役割選択
 // ----------------
 function selectRole(role) {
+
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -56,6 +63,7 @@ function selectRole(role) {
 // socket
 // ----------------
 function connectSocket() {
+
   socket = io("https://subtitle-server-czoz.onrender.com");
 
   socket.on("typing", ({ key, value }) => {
@@ -78,9 +86,11 @@ function connectSocket() {
 // 並び
 // ----------------
 function getOrder() {
+
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
   if (myRole === "C") return ["B","C","A"];
+
   return ["A","B","C"];
 }
 
@@ -98,22 +108,20 @@ function formatLogText(text) {
 
     let char = text[i];
 
-    // ✅ 通常幅
     let width = char.match(/[ -~]/) ? 1 : 2;
 
-    // ✅ 禁則：「15文字後の。」のみ半角
+    // 禁則
     if (char === "。" && count === 30) {
       width = 1;
     }
 
-    // ✅ 追加前に判定（←これが核心修正）
+    // ✅ 先に判定（これが重要）
     if (count + width > max) {
       result += line + "\n";
       line = "";
       count = 0;
     }
 
-    // ✅ 追加
     line += char;
     count += width;
   }
@@ -155,7 +163,9 @@ function initUI() {
     </div>
   `;
 
-  document.getElementById("columns").innerHTML =
+  const columns = document.getElementById("columns");
+
+  columns.innerHTML =
     getOrder().map(k => `
       <div style="display:flex; gap:10px; margin-bottom:20px;">
         
@@ -195,10 +205,16 @@ function initUI() {
     `).join("");
 
   ["A","B","C"].forEach(k => {
-    document.getElementById("input-" + k).oninput = (e) => {
-      inputs[k] = e.target.value;
-      if (socket) socket.emit("typing", { key:k, value:e.target.value });
-    };
+
+    document.getElementById("input-" + k)
+      .addEventListener("input", (e) => {
+
+        inputs[k] = e.target.value;
+
+        if (socket) {
+          socket.emit("typing", { key:k, value:e.target.value });
+        }
+      });
   });
 
   updateUI();
@@ -217,6 +233,7 @@ function updateUI() {
     if (!label || !input) return;
 
     label.textContent = k;
+
     label.style.backgroundColor =
       active === k ? "#00aa00" : "#555";
 
@@ -231,3 +248,76 @@ function updateUI() {
 
   if (logEl) {
     logEl.innerHTML =
+      log.map(l => formatLogText(l.text)).join("\n");
+
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+
+// ----------------
+// 送信
+// ----------------
+function send(key) {
+
+  const text = inputs[key] || "";
+
+  inputs[key] = "";
+
+  const el = document.getElementById("input-" + key);
+  if (el) el.value = "";
+
+  if (socket) {
+    socket.emit("send", { key, text });
+    socket.emit("typing", { key, value:"" });
+  }
+
+  updateUI();
+}
+
+// ----------------
+// F12
+// ----------------
+document.addEventListener("keydown", (e) => {
+
+  if (e.key === "F12") {
+
+    e.preventDefault();
+
+    if (myRole && active === myRole) {
+      send(myRole);
+    }
+  }
+});
+
+// ----------------
+// F4検索
+// ----------------
+document.addEventListener("keydown", (e) => {
+
+  if (e.key === "F4") {
+
+    e.preventDefault();
+
+    if (!myRole) return;
+
+    const input = document.getElementById("input-" + myRole);
+    const frame = document.getElementById("searchFrame");
+
+    if (!input || !frame) return;
+
+    const text = input.value.substring(
+      input.selectionStart,
+      input.selectionEnd
+    );
+
+    if (!text) return;
+
+    frame.src =
+      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q="
+      + encodeURIComponent(text);
+  }
+});
+
+</script>
+</body>
+</html>
