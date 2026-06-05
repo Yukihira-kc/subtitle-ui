@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>字幕１コラボ</title>
+<title>字幕コラボ</title>
 
-<!-- ✅ 絶対壊さない -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 </head>
@@ -32,7 +31,7 @@ let log = [];
 let myRole = null;
 
 // ----------------
-// ✅ 安全な初期化（ここ重要）
+// ✅ 安全初期化
 // ----------------
 window.addEventListener("load", () => {
   document.getElementById("btnA").onclick = () => selectRole("A");
@@ -86,45 +85,37 @@ function getOrder() {
 }
 
 // ----------------
-// ✅ ログ整形（仕様完全対応）
+// ✅ ログ整形（完全修正版）
 // ----------------
 function formatLogText(text) {
-  const max = 31; // 半角31
+
+  const max = 31;
   let result = "";
-  let count = 0;
   let line = "";
+  let count = 0;
 
   for (let i = 0; i < text.length; i++) {
 
     let char = text[i];
 
-    // ✅ 基本幅
+    // ✅ 通常幅
     let width = char.match(/[ -~]/) ? 1 : 2;
 
-    // ✅ 禁則処理
-    // 15文字（=30）で「。」なら半角扱い
+    // ✅ 禁則：「15文字後の。」のみ半角
     if (char === "。" && count === 30) {
       width = 1;
     }
 
-    // ✅ はみ出す場合
+    // ✅ 追加前に判定（←これが核心修正）
     if (count + width > max) {
-      result += line + "\n";
-      line = char;
-      count = width;
-      continue;
-    }
-
-    // ✅ 通常追加
-    line += char;
-    count += width;
-
-    // ✅ ぴったりなら改行
-    if (count === max) {
       result += line + "\n";
       line = "";
       count = 0;
     }
+
+    // ✅ 追加
+    line += char;
+    count += width;
   }
 
   result += line;
@@ -143,7 +134,6 @@ function initUI() {
       
       <div id="columns"></div>
 
-      <!-- ✅ ログ -->
       <div style="width:32ch; font-family:Consolas, monospace;">
         <h3>ログ</h3>
         <div id="log" style="
@@ -155,7 +145,6 @@ function initUI() {
         "></div>
       </div>
 
-      <!-- ✅ 検索 -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
@@ -241,72 +230,4 @@ function updateUI() {
   const logEl = document.getElementById("log");
 
   if (logEl) {
-    logEl.innerHTML = log.map(l => formatLogText(l.text)).join("\n");
-
-    // ✅ 常に最下部表示
-    logEl.scrollTop = logEl.scrollHeight;
-  }
-}
-
-// ----------------
-// 送信
-// ----------------
-function send(key) {
-  const text = inputs[key] || "";
-
-  inputs[key] = "";
-  const el = document.getElementById("input-" + key);
-  if (el) el.value = "";
-
-  if (socket) {
-    socket.emit("send", { key, text });
-    socket.emit("typing", { key, value:"" });
-  }
-
-  updateUI();
-}
-
-// ----------------
-// ✅ F12送信（維持）
-// ----------------
-document.addEventListener("keydown", (e) => {
-  if (e.key === "F12") {
-    e.preventDefault();
-    if (myRole && active === myRole) {
-      send(myRole);
-    }
-  }
-});
-
-// ----------------
-// ✅ F4検索
-// ----------------
-document.addEventListener("keydown", (e) => {
-
-  if (e.key === "F4") {
-    e.preventDefault();
-
-    if (!myRole) return;
-
-    const input = document.getElementById("input-" + myRole);
-    const frame = document.getElementById("searchFrame");
-
-    if (!input || !frame) return;
-
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-
-    if (start === end) return;
-
-    const text = input.value.substring(start, end);
-
-    frame.src =
-      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q=" +
-      encodeURIComponent(text);
-  }
-});
-
-</script>
-
-</body>
-</html>
+    logEl.innerHTML =
