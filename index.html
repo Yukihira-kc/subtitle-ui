@@ -21,7 +21,6 @@ body {
   box-sizing:border-box;
 }
 </style>
-
 </head>
 
 <body>
@@ -37,133 +36,61 @@ body {
 
 <script>
 
-// ----------------
+// =====================
 // 状態
-// ----------------
+// =====================
 let socket;
 let isConnected = false;
+let myRole = null;
 let inputs = { A:"", B:"", C:"" };
 let active = "A";
 let log = [];
-let myRole = null;
 
-// ----------------
-// ✅ 初期化（完全安全）
-// ----------------
-window.addEventListener("DOMContentLoaded", () => {
+// =====================
+// 初期化
+// =====================
+window.addEventListener("DOMContentLoaded", init);
 
-  document.getElementById("btnA")
-    .addEventListener("click", () => selectRole("A"));
+function init() {
+  bindRoleButtons();
+  bindGlobalKeys();
+}
 
-  document.getElementById("btnB")
-    .addEventListener("click", () => selectRole("B"));
+// =====================
+// イベント（役割選択）
+// =====================
+function bindRoleButtons() {
 
-  document.getElementById("btnC")
-    .addEventListener("click", () => selectRole("C"));
+  document.getElementById("btnA").onclick = () => startApp("A");
+  document.getElementById("btnB").onclick = () => startApp("B");
+  document.getElementById("btnC").onclick = () => startApp("C");
+}
 
-});
-
-// ----------------
-// 役割選択
-// ----------------
-function selectRole(role) {
+// =====================
+// アプリ開始
+// =====================
+function startApp(role) {
 
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
 
-  initUI();
+  createLayout();
+  createInputs();
+  setGuideLine();
   connectSocket();
 }
 
-// ----------------
-// socket
-// ----------------
-function connectSocket() {
+// =====================
+// UI構築
+// =====================
+function createLayout() {
 
-  socket = io("https://subtitle-server-czoz.onrender.com");
-
-  socket.on("connect", () => isConnected = true);
-  socket.on("disconnect", () => isConnected = false);
-
-  socket.on("typing", ({ key, value }) => {
-    inputs[key] = value;
-    updateUI();
-  });
-
-  socket.on("log", (data) => {
-    log.push(data);
-    updateUI();
-  });
-
-  socket.on("active", (next) => {
-    active = next;
-    updateUI();
-  });
-}
-
-// ----------------
-// 並び
-// ----------------
-function getOrder() {
-  if (myRole === "A") return ["C","A","B"];
-  if (myRole === "B") return ["A","B","C"];
-  if (myRole === "C") return ["B","C","A"];
-  return ["A","B","C"];
-}
-
-// ----------------
-// ✅ ログ（15.5固定）
-// ----------------
-function formatLogText(text) {
-
-  const MAX = 31;
-
-  let result = "";
-  let line = "";
-  let count = 0;
-
-  for (let i = 0; i < text.length; i++) {
-
-    let char = text[i];
-    let w = char.match(/[ -~]/) ? 1 : 2;
-
-    if (char === "。" && count === 30) w = 1;
-
-    if (count + w > MAX) {
-      result += line + "\n";
-      line = "";
-      count = 0;
-    }
-
-    line += char;
-    count += w;
-
-    if (count === MAX) {
-      result += line + "\n";
-      line = "";
-      count = 0;
-    }
-  }
-
-  result += line;
-  return result;
-}
-
-// ----------------
-// UI生成
-// ----------------
-function initUI() {
-
-  const app = document.getElementById("app");
-
-  app.innerHTML = `
+  document.getElementById("app").innerHTML = `
     <div style="display:flex; gap:20px;">
-      
       <div id="columns"></div>
 
-      <!-- ログ -->
       <div>
         <h3>ログ</h3>
         <div id="log" class="fixed" style="
@@ -175,56 +102,61 @@ function initUI() {
         "></div>
       </div>
 
-      <!-- 検索 -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
           style="width:600px;height:400px;border:1px solid white;">
         </iframe>
       </div>
-
     </div>
   `;
+}
+
+// =====================
+// 入力生成
+// =====================
+function getOrder() {
+  if (myRole==="A") return ["C","A","B"];
+  if (myRole==="B") return ["A","B","C"];
+  if (myRole==="C") return ["B","C","A"];
+}
+
+function createInputs() {
 
   const columns = document.getElementById("columns");
 
-  columns.innerHTML =
-    getOrder().map(k => `
-      <div style="display:flex; gap:10px; margin-bottom:20px;">
-
-        <div id="label-${k}" style="
-          width:40px;height:180px;
-          display:flex;align-items:center;justify-content:center;
-          background:#555;color:white;">
-        </div>
-
-        <textarea id="input-${k}" class="fixed"
-          style="height:180px;"></textarea>
-
+  columns.innerHTML = getOrder().map(k => `
+    <div style="display:flex; gap:10px; margin-bottom:20px;">
+      
+      <div id="label-${k}" style="
+        width:40px;height:180px;
+        display:flex;align-items:center;justify-content:center;
+        background:#555;color:white;">
       </div>
-    `).join("");
 
-  setGuideLine(); // ✅ 縦線
+      <textarea id="input-${k}" class="fixed"
+        style="height:180px;"></textarea>
+
+    </div>
+  `).join("");
 
   ["A","B","C"].forEach(k => {
 
-    document.getElementById("input-" + k)
-      .addEventListener("input", (e) => {
+    document.getElementById("input-" + k).oninput = e => {
+      inputs[k] = e.target.value;
 
-        inputs[k] = e.target.value;
-
-        if (socket && isConnected) {
-          socket.emit("typing",{key:k,value:e.target.value});
-        }
-      });
+      if (socket && isConnected) {
+        socket.emit("typing", { key:k, value:e.target.value });
+      }
+    };
   });
 
   updateUI();
 }
 
-// ----------------
-// ✅ 縦線一致
-// ----------------
+// =====================
+// ガイドライン
+// =====================
 function setGuideLine() {
 
   const span = document.createElement("span");
@@ -248,22 +180,82 @@ function setGuideLine() {
   });
 }
 
-// ----------------
-// 更新
-// ----------------
+// =====================
+// socket
+// =====================
+function connectSocket() {
+
+  socket = io("https://subtitle-server-czoz.onrender.com");
+
+  socket.on("connect", () => isConnected = true);
+  socket.on("disconnect", () => isConnected = false);
+
+  socket.on("typing", ({ key, value }) => {
+    inputs[key] = value;
+    updateUI();
+  });
+
+  socket.on("log", data => {
+    log.push(data);
+    updateUI();
+  });
+
+  socket.on("active", next => {
+    active = next;
+    updateUI();
+  });
+}
+
+// =====================
+// ログ処理（完全分離）
+// =====================
+function formatLogText(text) {
+
+  const MAX = 31;
+  let result = "";
+  let line = "";
+  let count = 0;
+
+  for (let i=0;i<text.length;i++){
+    let c = text[i];
+    let w = c.match(/[ -~]/) ? 1 : 2;
+
+    if (c==="。" && count===30) w=1;
+
+    if (count + w > MAX){
+      result += line + "\n";
+      line="";
+      count=0;
+    }
+
+    line += c;
+    count += w;
+
+    if (count===MAX){
+      result += line + "\n";
+      line="";
+      count=0;
+    }
+  }
+
+  result += line;
+  return result;
+}
+
+// =====================
+// UI更新
+// =====================
 function updateUI() {
 
   ["A","B","C"].forEach(k => {
 
-    const label = document.getElementById("label-" + k);
-    const input = document.getElementById("input-" + k);
+    const label = document.getElementById("label-"+k);
+    const input = document.getElementById("input-"+k);
 
     if (!label || !input) return;
 
     label.textContent = k;
-    label.style.background =
-      active === k ? "#0a0" : "#555";
-
+    label.style.background = active===k ? "#0a0" : "#555";
     input.readOnly = myRole !== k;
 
     if (k !== myRole) input.value = inputs[k] || "";
@@ -271,45 +263,67 @@ function updateUI() {
 
   const logEl = document.getElementById("log");
 
-  if (logEl) {
-    logEl.textContent =
-      log.map(l => formatLogText(l.text)).join("\n");
+  logEl.textContent =
+    log.map(l => formatLogText(l.text)).join("\n");
 
-    logEl.scrollTop = logEl.scrollHeight;
-  }
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
-// ----------------
+// =====================
 // 送信
-// ----------------
-function send(key) {
+// =====================
+function send() {
 
   if (!isConnected) return;
 
-  const text = inputs[key] || "";
+  const text = inputs[myRole] || "";
 
-  inputs[key] = "";
+  inputs[myRole] = "";
 
-  const el = document.getElementById("input-" + key);
-  if (el) el.value = "";
+  document.getElementById("input-" + myRole).value = "";
 
-  socket.emit("send",{key,text});
-  socket.emit("typing",{key,value:""});
+  socket.emit("send",{ key:myRole, text });
+  socket.emit("typing",{ key:myRole, value:"" });
 
   updateUI();
 }
 
-// ----------------
-// F12
-// ----------------
-document.addEventListener("keydown", e => {
+// =====================
+// ✅ キー管理（ここに集約）
+// =====================
+function bindGlobalKeys() {
+  document.addEventListener("keydown", handleKey);
+}
+
+function handleKey(e) {
+
   if (e.key === "F12") {
     e.preventDefault();
-    if (myRole && active === myRole) send(myRole);
+    if (myRole && active === myRole) send();
   }
-});
+
+  if (e.key === "F4") {
+    e.preventDefault();
+
+    const input = document.getElementById("input-" + myRole);
+    const frame = document.getElementById("searchFrame");
+
+    if (!input || !frame) return;
+
+    const text = input.value.substring(
+      input.selectionStart,
+      input.selectionEnd
+    );
+
+    if (!text) return;
+
+    frame.src =
+      "https://www.bing.com/search?q=" +
+      encodeURIComponent(text);
+  }
+}
 
 </script>
-
 </body>
 </html>
+``
