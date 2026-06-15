@@ -5,6 +5,7 @@
 <title>字幕コラボ</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
 </head>
 
 <body style="background:#111;color:white;font-family:Meiryo, sans-serif">
@@ -24,22 +25,33 @@
 // 状態
 // ----------------
 let socket;
-let isConnected = false; // ✅ 追加
+let isConnected = false;
 let inputs = { A:"", B:"", C:"" };
 let active = "A";
 let log = [];
 let myRole = null;
 
 // ----------------
-// 初期化
+// 初期化（絶対安全）
 // ----------------
 window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnA").onclick = () => selectRole("A");
-  document.getElementById("btnB").onclick = () => selectRole("B");
-  document.getElementById("btnC").onclick = () => selectRole("C");
+
+  document.getElementById("btnA")
+    .addEventListener("click", () => selectRole("A"));
+
+  document.getElementById("btnB")
+    .addEventListener("click", () => selectRole("B"));
+
+  document.getElementById("btnC")
+    .addEventListener("click", () => selectRole("C"));
+
 });
 
+// ----------------
+// 役割選択
+// ----------------
 function selectRole(role) {
+
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -50,15 +62,14 @@ function selectRole(role) {
 }
 
 // ----------------
-// ✅ socket接続
+// socket接続
 // ----------------
 function connectSocket() {
 
   socket = io("https://subtitle-server-czoz.onrender.com");
 
   socket.on("connect", () => {
-    console.log("接続完了");
-    isConnected = true; // ✅ ここ重要
+    isConnected = true;
   });
 
   socket.on("disconnect", () => {
@@ -85,16 +96,19 @@ function connectSocket() {
 // 並び
 // ----------------
 function getOrder() {
+
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
   if (myRole === "C") return ["B","C","A"];
+
   return ["A","B","C"];
 }
 
 // ----------------
-// ✅ ログ整形（31固定）
+// ✅ ログ整形（安定版）
 // ----------------
 function formatLogText(text) {
+
   const max = 31;
   let result = "";
 
@@ -117,6 +131,7 @@ function initUI() {
       
       <div id="columns"></div>
 
+      <!-- ログ -->
       <div style="width:32ch; font-family:Consolas, monospace;">
         <h3>ログ</h3>
         <div id="log" style="
@@ -128,6 +143,7 @@ function initUI() {
         "></div>
       </div>
 
+      <!-- 検索 -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
@@ -154,18 +170,33 @@ function initUI() {
           width:500px;height:180px;
           font-family:Consolas, monospace;
           font-size:24px;line-height:1.4;
+
+          /* ✅ 縦線ここ復活 */
+          background-image:
+            linear-gradient(
+              to right,
+              transparent 0,
+              transparent calc(28.5ch),
+              red calc(28.5ch),
+              red calc(28.5ch + 1px),
+              transparent calc(28.5ch + 1px)
+            );
         "></textarea>
 
       </div>
     `).join("");
 
   ["A","B","C"].forEach(k => {
-    document.getElementById("input-" + k).oninput = (e) => {
-      inputs[k] = e.target.value;
-      if (socket && isConnected) {
-        socket.emit("typing", { key:k, value:e.target.value });
-      }
-    };
+
+    document.getElementById("input-" + k)
+      .addEventListener("input", (e) => {
+
+        inputs[k] = e.target.value;
+
+        if (socket && isConnected) {
+          socket.emit("typing", { key:k, value:e.target.value });
+        }
+      });
   });
 
   updateUI();
@@ -205,14 +236,11 @@ function updateUI() {
 }
 
 // ----------------
-// ✅ 送信（安全化）
+// 送信
 // ----------------
 function send(key) {
 
-  if (!isConnected) {
-    console.log("まだ接続されていないので送信しない");
-    return;
-  }
+  if (!isConnected) return;
 
   const text = inputs[key] || "";
 
@@ -229,18 +257,23 @@ function send(key) {
 // ----------------
 // F12
 // ----------------
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", (e) => {
+
   if (e.key === "F12") {
     e.preventDefault();
-    if (myRole && active === myRole) send(myRole);
+    if (myRole && active === myRole) {
+      send(myRole);
+    }
   }
 });
 
 // ----------------
 // F4検索
 // ----------------
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", (e) => {
+
   if (e.key === "F4") {
+
     e.preventDefault();
 
     if (!myRole) return;
@@ -258,8 +291,8 @@ document.addEventListener("keydown", e => {
     if (!text) return;
 
     frame.src =
-      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q=" +
-      encodeURIComponent(text);
+      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q="
+      + encodeURIComponent(text);
   }
 });
 
