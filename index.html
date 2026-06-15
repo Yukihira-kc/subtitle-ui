@@ -24,32 +24,22 @@
 // 状態
 // ----------------
 let socket;
+let isConnected = false; // ✅ 追加
 let inputs = { A:"", B:"", C:"" };
 let active = "A";
 let log = [];
 let myRole = null;
 
 // ----------------
-// ✅ 安定初期化（絶対安全）
+// 初期化
 // ----------------
 window.addEventListener("DOMContentLoaded", () => {
-
-  document.getElementById("btnA")
-    .addEventListener("click", () => selectRole("A"));
-
-  document.getElementById("btnB")
-    .addEventListener("click", () => selectRole("B"));
-
-  document.getElementById("btnC")
-    .addEventListener("click", () => selectRole("C"));
-
+  document.getElementById("btnA").onclick = () => selectRole("A");
+  document.getElementById("btnB").onclick = () => selectRole("B");
+  document.getElementById("btnC").onclick = () => selectRole("C");
 });
 
-// ----------------
-// 役割選択
-// ----------------
 function selectRole(role) {
-
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -60,11 +50,20 @@ function selectRole(role) {
 }
 
 // ----------------
-// socket
+// ✅ socket接続
 // ----------------
 function connectSocket() {
 
   socket = io("https://subtitle-server-czoz.onrender.com");
+
+  socket.on("connect", () => {
+    console.log("接続完了");
+    isConnected = true; // ✅ ここ重要
+  });
+
+  socket.on("disconnect", () => {
+    isConnected = false;
+  });
 
   socket.on("typing", ({ key, value }) => {
     inputs[key] = value;
@@ -86,47 +85,23 @@ function connectSocket() {
 // 並び
 // ----------------
 function getOrder() {
-
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
   if (myRole === "C") return ["B","C","A"];
-
   return ["A","B","C"];
 }
 
 // ----------------
-// ✅ ログ整形（完全修正版）
+// ✅ ログ整形（31固定）
 // ----------------
 function formatLogText(text) {
-
   const max = 31;
   let result = "";
-  let line = "";
-  let count = 0;
 
-  for (let i = 0; i < text.length; i++) {
-
-    let char = text[i];
-
-    let width = char.match(/[ -~]/) ? 1 : 2;
-
-    // 禁則
-    if (char === "。" && count === 30) {
-      width = 1;
-    }
-
-    // ✅ 先に判定（これが重要）
-    if (count + width > max) {
-      result += line + "\n";
-      line = "";
-      count = 0;
-    }
-
-    line += char;
-    count += width;
+  for (let i = 0; i < text.length; i += max) {
+    result += text.substring(i, i + max) + "\n";
   }
 
-  result += line;
   return result;
 }
 
@@ -170,51 +145,27 @@ function initUI() {
       <div style="display:flex; gap:10px; margin-bottom:20px;">
         
         <div id="label-${k}" style="
-          width:40px;
-          height:180px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          border-radius:6px;
-          font-weight:bold;
-          color:#fff;
+          width:40px;height:180px;
+          display:flex;align-items:center;justify-content:center;
+          border-radius:6px;font-weight:bold;color:#fff;
         "></div>
 
-        <textarea
-          id="input-${k}"
-          style="
-            width:500px;
-            height:180px;
-            font-family:Consolas, monospace;
-            font-size:24px;
-            line-height:1.4;
-
-            background-image:
-              linear-gradient(
-                to right,
-                transparent 0,
-                transparent calc(28.5ch),
-                red calc(28.5ch),
-                red calc(28.5ch + 1px),
-                transparent calc(28.5ch + 1px)
-              );
-          "
-        ></textarea>
+        <textarea id="input-${k}" style="
+          width:500px;height:180px;
+          font-family:Consolas, monospace;
+          font-size:24px;line-height:1.4;
+        "></textarea>
 
       </div>
     `).join("");
 
   ["A","B","C"].forEach(k => {
-
-    document.getElementById("input-" + k)
-      .addEventListener("input", (e) => {
-
-        inputs[k] = e.target.value;
-
-        if (socket) {
-          socket.emit("typing", { key:k, value:e.target.value });
-        }
-      });
+    document.getElementById("input-" + k).oninput = (e) => {
+      inputs[k] = e.target.value;
+      if (socket && isConnected) {
+        socket.emit("typing", { key:k, value:e.target.value });
+      }
+    };
   });
 
   updateUI();
@@ -233,7 +184,6 @@ function updateUI() {
     if (!label || !input) return;
 
     label.textContent = k;
-
     label.style.backgroundColor =
       active === k ? "#00aa00" : "#555";
 
@@ -255,21 +205,23 @@ function updateUI() {
 }
 
 // ----------------
-// 送信
+// ✅ 送信（安全化）
 // ----------------
 function send(key) {
+
+  if (!isConnected) {
+    console.log("まだ接続されていないので送信しない");
+    return;
+  }
 
   const text = inputs[key] || "";
 
   inputs[key] = "";
 
-  const el = document.getElementById("input-" + key);
-  if (el) el.value = "";
+  document.getElementById("input-" + key).value = "";
 
-  if (socket) {
-    socket.emit("send", { key, text });
-    socket.emit("typing", { key, value:"" });
-  }
+  socket.emit("send", { key, text });
+  socket.emit("typing", { key, value:"" });
 
   updateUI();
 }
@@ -277,25 +229,18 @@ function send(key) {
 // ----------------
 // F12
 // ----------------
-document.addEventListener("keydown", (e) => {
-
+document.addEventListener("keydown", e => {
   if (e.key === "F12") {
-
     e.preventDefault();
-
-    if (myRole && active === myRole) {
-      send(myRole);
-    }
+    if (myRole && active === myRole) send(myRole);
   }
 });
 
 // ----------------
 // F4検索
 // ----------------
-document.addEventListener("keydown", (e) => {
-
+document.addEventListener("keydown", e => {
   if (e.key === "F4") {
-
     e.preventDefault();
 
     if (!myRole) return;
@@ -313,8 +258,8 @@ document.addEventListener("keydown", (e) => {
     if (!text) return;
 
     frame.src =
-      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q="
-      + encodeURIComponent(text);
+      "https://www.bing.com/search?cc=JP&setlang=ja&form=MSNVS&q=" +
+      encodeURIComponent(text);
   }
 });
 
