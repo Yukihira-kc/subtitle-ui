@@ -21,6 +21,7 @@ body {
   box-sizing:border-box;
 }
 </style>
+
 </head>
 
 <body>
@@ -36,6 +37,9 @@ body {
 
 <script>
 
+// ----------------
+// 状態
+// ----------------
 let socket;
 let isConnected = false;
 let inputs = { A:"", B:"", C:"" };
@@ -44,20 +48,31 @@ let log = [];
 let myRole = null;
 
 // ----------------
-// 初期化
+// ✅ 初期化（完全安全）
 // ----------------
 window.addEventListener("DOMContentLoaded", () => {
 
-  btnA.onclick = () => selectRole("A");
-  btnB.onclick = () => selectRole("B");
-  btnC.onclick = () => selectRole("C");
+  document.getElementById("btnA")
+    .addEventListener("click", () => selectRole("A"));
+
+  document.getElementById("btnB")
+    .addEventListener("click", () => selectRole("B"));
+
+  document.getElementById("btnC")
+    .addEventListener("click", () => selectRole("C"));
 
 });
 
+// ----------------
+// 役割選択
+// ----------------
 function selectRole(role) {
+
   myRole = role;
-  role-select.style.display = "none";
-  app.style.display = "block";
+
+  document.getElementById("role-select").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
   initUI();
   connectSocket();
 }
@@ -99,15 +114,18 @@ function getOrder() {
 }
 
 // ----------------
-// ✅ ログ処理（確定版）
+// ✅ ログ（15.5固定）
 // ----------------
 function formatLogText(text) {
+
   const MAX = 31;
+
   let result = "";
   let line = "";
   let count = 0;
 
   for (let i = 0; i < text.length; i++) {
+
     let char = text[i];
     let w = char.match(/[ -~]/) ? 1 : 2;
 
@@ -134,9 +152,11 @@ function formatLogText(text) {
 }
 
 // ----------------
-// UI
+// UI生成
 // ----------------
 function initUI() {
+
+  const app = document.getElementById("app");
 
   app.innerHTML = `
     <div style="display:flex; gap:20px;">
@@ -155,7 +175,7 @@ function initUI() {
         "></div>
       </div>
 
-      <!-- ✅ 検索復活 -->
+      <!-- 検索 -->
       <div>
         <h3>検索</h3>
         <iframe id="searchFrame"
@@ -184,35 +204,112 @@ function initUI() {
       </div>
     `).join("");
 
-  setGuideLine(); // ✅ 線を動的生成
+  setGuideLine(); // ✅ 縦線
 
   ["A","B","C"].forEach(k => {
-    document.getElementById("input-" + k).oninput = e => {
-      inputs[k] = e.target.value;
-      if (socket && isConnected) {
-        socket.emit("typing",{key:k,value:e.target.value});
-      }
-    };
+
+    document.getElementById("input-" + k)
+      .addEventListener("input", (e) => {
+
+        inputs[k] = e.target.value;
+
+        if (socket && isConnected) {
+          socket.emit("typing",{key:k,value:e.target.value});
+        }
+      });
   });
 
   updateUI();
 }
 
 // ----------------
-// ✅ 縦線を正確に作る
+// ✅ 縦線一致
 // ----------------
 function setGuideLine() {
 
-  const test = document.createElement("span");
-  test.style.font = "24px Consolas, monospace";
-  test.innerText = "あ".repeat(15.5);
+  const span = document.createElement("span");
+  span.style.font = "24px Consolas, monospace";
+  span.innerText = "あ".repeat(15.5);
 
-  document.body.appendChild(test);
-  const width = test.getBoundingClientRect().width;
-  document.body.removeChild(test);
+  document.body.appendChild(span);
+  const w = span.getBoundingClientRect().width;
+  document.body.removeChild(span);
 
   document.querySelectorAll("textarea").forEach(el => {
     el.style.backgroundImage = `
       linear-gradient(
         to right,
-        transparent ${width}px,
+        transparent ${w}px,
+        red ${w}px,
+        red ${w+1}px,
+        transparent ${w+1}px
+      )
+    `;
+  });
+}
+
+// ----------------
+// 更新
+// ----------------
+function updateUI() {
+
+  ["A","B","C"].forEach(k => {
+
+    const label = document.getElementById("label-" + k);
+    const input = document.getElementById("input-" + k);
+
+    if (!label || !input) return;
+
+    label.textContent = k;
+    label.style.background =
+      active === k ? "#0a0" : "#555";
+
+    input.readOnly = myRole !== k;
+
+    if (k !== myRole) input.value = inputs[k] || "";
+  });
+
+  const logEl = document.getElementById("log");
+
+  if (logEl) {
+    logEl.textContent =
+      log.map(l => formatLogText(l.text)).join("\n");
+
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+
+// ----------------
+// 送信
+// ----------------
+function send(key) {
+
+  if (!isConnected) return;
+
+  const text = inputs[key] || "";
+
+  inputs[key] = "";
+
+  const el = document.getElementById("input-" + key);
+  if (el) el.value = "";
+
+  socket.emit("send",{key,text});
+  socket.emit("typing",{key,value:""});
+
+  updateUI();
+}
+
+// ----------------
+// F12
+// ----------------
+document.addEventListener("keydown", e => {
+  if (e.key === "F12") {
+    e.preventDefault();
+    if (myRole && active === myRole) send(myRole);
+  }
+});
+
+</script>
+
+</body>
+</html>
