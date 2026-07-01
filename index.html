@@ -37,8 +37,6 @@ body {
 <script>
 
 // =====================
-// 状態
-// =====================
 let socket;
 let isConnected = false;
 let myRole = null;
@@ -46,8 +44,6 @@ let inputs = { A:"", B:"", C:"" };
 let active = "A";
 let log = [];
 
-// =====================
-// 初期化
 // =====================
 window.addEventListener("DOMContentLoaded", init);
 
@@ -57,17 +53,13 @@ function init() {
 }
 
 // =====================
-// 役割選択
-// =====================
 function bindRoleButtons() {
-
   document.getElementById("btnA").onclick = () => startApp("A");
   document.getElementById("btnB").onclick = () => startApp("B");
   document.getElementById("btnC").onclick = () => startApp("C");
 }
 
 function startApp(role) {
-
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -80,10 +72,7 @@ function startApp(role) {
 }
 
 // =====================
-// UI
-// =====================
 function createLayout() {
-
   document.getElementById("app").innerHTML = `
     <div style="display:flex; gap:20px;">
       <div id="columns"></div>
@@ -110,39 +99,31 @@ function createLayout() {
 }
 
 // =====================
-// 入力UI
-// =====================
-function getOrder() {
-  if (myRole==="A") return ["C","A","B"];
-  if (myRole==="B") return ["A","B","C"];
-  if (myRole==="C") return ["B","C","A"];
+function getOrder(){
+  if(myRole==="A") return ["C","A","B"];
+  if(myRole==="B") return ["A","B","C"];
+  if(myRole==="C") return ["B","C","A"];
 }
 
-function createInputs() {
-
+function createInputs(){
   const columns = document.getElementById("columns");
 
-  columns.innerHTML = getOrder().map(k => `
+  columns.innerHTML = getOrder().map(k=>`
     <div style="display:flex; gap:10px; margin-bottom:20px;">
-      
       <div id="label-${k}" style="
         width:40px;height:180px;
         display:flex;align-items:center;justify-content:center;
-        background:#555;color:white;">
-      </div>
+        background:#555;color:white;"></div>
 
       <textarea id="input-${k}" class="fixed"
         style="height:180px;"></textarea>
-
     </div>
   `).join("");
 
-  ["A","B","C"].forEach(k => {
-
-    document.getElementById("input-" + k).oninput = e => {
-      inputs[k] = e.target.value;
-
-      if (socket && isConnected) {
+  ["A","B","C"].forEach(k=>{
+    document.getElementById("input-"+k).oninput = e=>{
+      inputs[k]=e.target.value;
+      if(socket && isConnected){
         socket.emit("typing",{key:k,value:e.target.value});
       }
     };
@@ -152,180 +133,161 @@ function createInputs() {
 }
 
 // =====================
-// 縦線
-// =====================
-function setGuideLine() {
-
-  const span = document.createElement("span");
-  span.style.font = "24px Consolas, monospace";
-  span.innerText = "あ".repeat(15.5);
+function setGuideLine(){
+  const span=document.createElement("span");
+  span.style.font="24px Consolas";
+  span.innerText="あ".repeat(15.5);
 
   document.body.appendChild(span);
-  const w = span.getBoundingClientRect().width;
+  const w=span.getBoundingClientRect().width;
   document.body.removeChild(span);
 
-  document.querySelectorAll("textarea").forEach(el => {
-    el.style.backgroundImage = `
+  document.querySelectorAll("textarea").forEach(el=>{
+    el.style.backgroundImage=`
       linear-gradient(
         to right,
         transparent ${w}px,
         red ${w}px,
         red ${w+1}px,
         transparent ${w+1}px
-      )
-    `;
+      )`;
   });
 }
 
 // =====================
-// socket
-// =====================
-function connectSocket() {
+function connectSocket(){
+  socket=io("https://subtitle-server-czoz.onrender.com");
 
-  socket = io("https://subtitle-server-czoz.onrender.com");
+  socket.on("connect",()=>isConnected=true);
+  socket.on("disconnect",()=>isConnected=false);
 
-  socket.on("connect", () => isConnected = true);
-  socket.on("disconnect", () => isConnected = false);
-
-  socket.on("typing", ({ key, value }) => {
-    inputs[key] = value;
+  socket.on("typing",({key,value})=>{
+    inputs[key]=value;
     updateUI();
   });
 
-  socket.on("log", data => {
+  socket.on("log",data=>{
     log.push(data);
     updateUI();
   });
 
-  socket.on("active", next => {
-    active = next;
+  socket.on("active",next=>{
+    active=next;
     updateUI();
   });
 }
 
 // =====================
-// ✅ ログ（禁則処理完全版）
+// ✅ 改行修正済み
 // =====================
-function formatLogText(text) {
+function formatLogText(text){
 
-  const MAX = 31;
+  const MAX=31;
 
-  let result = "";
-  let line = "";
-  let count = 0;
+  let lines=[];
+  let line="";
+  let count=0;
 
-  for (let i=0;i<text.length;i++){
+  for(let i=0;i<text.length;i++){
 
-    let char = text[i];
+    let c=text[i];
+    let w=c.match(/[ -~]/)?1:2;
 
-    // 基本幅
-    let w = char.match(/[ -~]/) ? 1 : 2;
-
-    // ✅ 禁則：「。」が行末に来る場合だけ半角扱い
-    if (char === "。" && count === 30) {
-      w = 1;
+    if(c==="。" && count===30){
+      w=1;
     }
 
-    // 入れる前チェック
-    if (count + w > MAX){
-      result += line + "\n";
-      line = "";
-      count = 0;
+    if(count+w>MAX){
+      lines.push(line);
+      line="";
+      count=0;
     }
 
-    // 追加
-    line += char;
-    count += w;
+    line+=c;
+    count+=w;
 
-    // ピッタリ改行
-    if (count === MAX){
-      result += line + "\n";
-      line = "";
-      count = 0;
+    if(count===MAX){
+      lines.push(line);
+      line="";
+      count=0;
     }
   }
 
-  result += line;
-  return result;
+  if(line){
+    lines.push(line);
+  }
+
+  return lines.join("\n"); // ✅ ここでのみ改行
 }
 
 // =====================
-// 更新
-// =====================
-function updateUI() {
+function updateUI(){
 
-  ["A","B","C"].forEach(k => {
+  ["A","B","C"].forEach(k=>{
+    const label=document.getElementById("label-"+k);
+    const input=document.getElementById("input-"+k);
 
-    const label = document.getElementById("label-"+k);
-    const input = document.getElementById("input-"+k);
+    if(!label||!input)return;
 
-    if (!label || !input) return;
+    label.textContent=k;
+    label.style.background=active===k?"#0a0":"#555";
+    input.readOnly=myRole!==k;
 
-    label.textContent = k;
-    label.style.background = active===k ? "#0a0" : "#555";
-    input.readOnly = myRole !== k;
-
-    if (k !== myRole) input.value = inputs[k] || "";
+    if(k!==myRole) input.value=inputs[k]||"";
   });
 
-  const logEl = document.getElementById("log");
+  const logEl=document.getElementById("log");
 
-  logEl.textContent =
-    log.map(l => formatLogText(l.text)).join("\n");
+  logEl.textContent=
+    log.map(l=>formatLogText(l.text)).join("\n");
 
-  logEl.scrollTop = logEl.scrollHeight;
+  logEl.scrollTop=logEl.scrollHeight;
 }
 
 // =====================
-// 送信
-// =====================
-function send() {
+function send(){
 
-  if (!isConnected) return;
+  if(!isConnected)return;
 
-  const text = inputs[myRole] || "";
+  const text=inputs[myRole]||"";
 
-  inputs[myRole] = "";
+  inputs[myRole]="";
+  document.getElementById("input-"+myRole).value="";
 
-  document.getElementById("input-" + myRole).value = "";
-
-  socket.emit("send",{ key:myRole, text });
-  socket.emit("typing",{ key:myRole, value:"" });
+  socket.emit("send",{key:myRole,text});
+  socket.emit("typing",{key:myRole,value:""});
 
   updateUI();
 }
 
 // =====================
-// キー
-// =====================
-function bindGlobalKeys() {
-  document.addEventListener("keydown", handleKey);
+function bindGlobalKeys(){
+  document.addEventListener("keydown",handleKey);
 }
 
-function handleKey(e) {
+function handleKey(e){
 
-  if (e.key === "F12") {
+  if(e.key==="F12"){
     e.preventDefault();
-    if (myRole && active === myRole) send();
+    if(myRole && active===myRole) send();
   }
 
-  if (e.key === "F4") {
+  if(e.key==="F4"){
     e.preventDefault();
 
-    const input = document.getElementById("input-" + myRole);
-    const frame = document.getElementById("searchFrame");
+    const input=document.getElementById("input-"+myRole);
+    const frame=document.getElementById("searchFrame");
 
-    if (!input || !frame) return;
+    if(!input||!frame)return;
 
-    const text = input.value.substring(
+    const text=input.value.substring(
       input.selectionStart,
       input.selectionEnd
     );
 
-    if (!text) return;
+    if(!text)return;
 
-    frame.src =
-      "https://www.bing.com/search?q=" +
+    frame.src="https://www.bing.com/search?q="+
       encodeURIComponent(text);
   }
 }
