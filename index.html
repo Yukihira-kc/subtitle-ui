@@ -85,7 +85,7 @@ function createLayout() {
           border:1px solid white;
           padding:4px;
           white-space:pre-wrap;
-          overflow-wrap:break-word;
+          overflow-wrap:anywhere;
         "></div>
       </div>
 
@@ -136,15 +136,12 @@ function createInputs(){
 
 // =====================
 function setGuideLine(){
-
   const span=document.createElement("span");
   span.style.font="24px Consolas";
   span.innerText="あ".repeat(15.5);
 
   document.body.appendChild(span);
-
   const w=span.getBoundingClientRect().width;
-
   document.body.removeChild(span);
 
   document.querySelectorAll("textarea").forEach(el=>{
@@ -155,23 +152,16 @@ function setGuideLine(){
         red ${w}px,
         red ${w+1}px,
         transparent ${w+1}px
-      )
-    `;
+      )`;
   });
 }
 
 // =====================
 function connectSocket(){
-
   socket=io("https://subtitle-server-czoz.onrender.com");
 
-  socket.on("connect",()=>{
-    isConnected=true;
-  });
-
-  socket.on("disconnect",()=>{
-    isConnected=false;
-  });
+  socket.on("connect",()=>isConnected=true);
+  socket.on("disconnect",()=>isConnected=false);
 
   socket.on("typing",({key,value})=>{
     inputs[key]=value;
@@ -193,55 +183,43 @@ function connectSocket(){
 function updateUI(){
 
   ["A","B","C"].forEach(k=>{
-
     const label=document.getElementById("label-"+k);
     const input=document.getElementById("input-"+k);
 
-    if(!label || !input) return;
+    if(!label||!input)return;
 
     label.textContent=k;
-    label.style.background=
-      active===k ? "#0a0" : "#555";
-
+    label.style.background=active===k?"#0a0":"#555";
     input.readOnly=myRole!==k;
 
-    if(k!==myRole){
-      input.value=inputs[k] || "";
-    }
+    if(k!==myRole) input.value=inputs[k]||"";
   });
 
   const logEl=document.getElementById("log");
 
   logEl.textContent =
     log
-      .map(l => String(l.text ?? "").replace(/。/g,"｡"))
+      .map(l =>
+        String(l.text || "")
+          .replace(/。/g,"｡")
+      )
       .join("\n");
 
-  logEl.scrollTop = logEl.scrollHeight;
+  logEl.scrollTop=logEl.scrollHeight;
 }
 
 // =====================
 function send(){
 
-  if(!isConnected) return;
+  if(!isConnected)return;
 
-  const text=inputs[myRole] || "";
+  const text=inputs[myRole]||"";
 
   inputs[myRole]="";
+  document.getElementById("input-"+myRole).value="";
 
-  document.getElementById(
-    "input-"+myRole
-  ).value = "";
-
-  socket.emit("send",{
-    key:myRole,
-    text
-  });
-
-  socket.emit("typing",{
-    key:myRole,
-    value:""
-  });
+  socket.emit("send",{key:myRole,text});
+  socket.emit("typing",{key:myRole,value:""});
 
   updateUI();
 }
@@ -255,31 +233,25 @@ function handleKey(e){
 
   if(e.key==="F12"){
     e.preventDefault();
-
-    if(myRole && active===myRole){
-      send();
-    }
+    if(myRole && active===myRole) send();
   }
 
   if(e.key==="F4"){
-
     e.preventDefault();
 
-    const input=
-      document.getElementById("input-"+myRole);
+    const input=document.getElementById("input-"+myRole);
+    const frame=document.getElementById("searchFrame");
 
-    const frame=
-      document.getElementById("searchFrame");
+    if(!input||!frame)return;
 
-    if(!input || !input.value.substring(
+    const text=input.value.substring(
       input.selectionStart,
       input.selectionEnd
     );
 
-    if(!text) return;
+    if(!text)return;
 
-    frame.src=
-      "https://www.bing.com/search?q="+
+    frame.src="https://www.bing.com/search?q="+
       encodeURIComponent(text);
   }
 }
