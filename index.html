@@ -79,7 +79,7 @@ function createLayout() {
 
       <div>
         <h3>ログ</h3>
-        <div id="log" class="fixed" style="
+        <div id="log" style="
           height:400px;
           overflow-y:scroll;
           border:1px solid white;
@@ -136,12 +136,15 @@ function createInputs(){
 
 // =====================
 function setGuideLine(){
+
   const span=document.createElement("span");
   span.style.font="24px Consolas";
   span.innerText="あ".repeat(15.5);
 
   document.body.appendChild(span);
+
   const w=span.getBoundingClientRect().width;
+
   document.body.removeChild(span);
 
   document.querySelectorAll("textarea").forEach(el=>{
@@ -154,6 +157,17 @@ function setGuideLine(){
         transparent ${w+1}px
       )`;
   });
+
+  const logEl=document.getElementById("log");
+
+  if(logEl){
+    logEl.style.width=(w + 8) + "px";
+    logEl.style.maxWidth=(w + 8) + "px";
+    logEl.style.fontFamily="Consolas, monospace";
+    logEl.style.fontSize="24px";
+    logEl.style.lineHeight="34px";
+    logEl.style.boxSizing="border-box";
+  }
 }
 
 // =====================
@@ -225,8 +239,7 @@ function send(){
 }
 
 // =====================
-function bindGlobalKeys(){
-  document.addEventListener("keydown",handleKey);
+function Listener("keydown",handleKey);
 }
 
 function handleKey(e){
