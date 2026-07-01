@@ -231,7 +231,9 @@ function bindGlobalKeys(){
 
 function handleKey(e){
 
-  if(myRole && active===myRole) send();
+  if(e.key==="F12"){
+    e.preventDefault();
+    if(myRole && active===myRole) send();
   }
 
   if(e.key==="F4"){
