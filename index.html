@@ -1,1022 +1,600 @@
 <!DOCTYPE html>
-
 <html lang="ja">
-
 <head>
-
 <meta charset="UTF-8">
-
 <title>字幕コラボ</title>
-
-
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-
-
 <style>
-
 body {
-
-&#x20; background:#111;
-
-&#x20; color:white;
-
-&#x20; font-family:Meiryo, monospace;
-
+  background:#111;
+  color:white;
+  font-family:Meiryo, monospace;
 }
-
-
 
 .fixed {
-
-&#x20; width:496px;
-
-&#x20; font-family:Consolas, monospace;
-
-&#x20; font-size:24px;
-
-&#x20; line-height:34px;
-
-&#x20; box-sizing:border-box;
-
+  width:496px;
+  font-family:Consolas, monospace;
+  font-size:24px;
+  line-height:34px;
+  box-sizing:border-box;
 }
 
+.role-button {
+  min-width:80px;
+  padding:8px 16px;
+  margin-right:8px;
+}
+
+.role-button:disabled {
+  opacity:0.35;
+  cursor:not-allowed;
+}
 </style>
-
 </head>
-
-
 
 <body>
 
-
-
 <div id="role-select">
+  <h2>担当を選択</h2>
 
-&#x20; <h2>担当を選択</h2>
-
-&#x20; <button id="btnA">A</button>
-
-&#x20; <button id="btnB">B</button>
-
-&#x20; <button id="btnC">C</button>
-
+  <button id="btnA" class="role-button">A</button>
+  <button id="btnB" class="role-button">B</button>
+  <button id="btnC" class="role-button">C</button>
 </div>
-
-
 
 <div id="app" style="display:none"></div>
 
-
-
 <script>
 
-
-
 // =====================
-
 let socket;
-
 let isConnected = false;
-
 let myRole = null;
-
-
+let pendingRole = null;
 
 let inputs = {
-
-&#x20; A:"",
-
-&#x20; B:"",
-
-&#x20; C:""
-
+  A:"",
+  B:"",
+  C:""
 };
-
-
 
 let active = null;
 
-
-
 let connectedRoles = {
-
-&#x20; A:false,
-
-&#x20; B:false,
-
-&#x20; C:false
-
+  A:false,
+  B:false,
+  C:false
 };
 
-
-
-let log = \[];
-
-
-
-// IME変換中か判定
-
-let isComposing = false;
-
-
+let log = [];
 
 // =====================
-
 window.addEventListener("DOMContentLoaded", init);
-
-
 
 function init() {
 
-&#x20; bindRoleButtons();
-
-&#x20; bindGlobalKeys();
-
+  bindRoleButtons();
+  bindGlobalKeys();
+  connectSocket();
+  updateRoleButtons();
 }
 
-
-
 // =====================
-
 function bindRoleButtons() {
 
-
-
-&#x20; document.getElementById("btnA").onclick = () => startApp("A");
-
-&#x20; document.getElementById("btnB").onclick = () => startApp("B");
-
-&#x20; document.getElementById("btnC").onclick = () => startApp("C");
-
+  document.getElementById("btnA").onclick = () => startApp("A");
+  document.getElementById("btnB").onclick = () => startApp("B");
+  document.getElementById("btnC").onclick = () => startApp("C");
 }
 
+// =====================
+// 担当選択ボタン更新
+function updateRoleButtons() {
 
+  ["A","B","C"].forEach(k => {
+
+    const button = document.getElementById("btn" + k);
+
+    if (!button) {
+      return;
+    }
+
+    const occupied = connectedRoles[k];
+
+    button.disabled =
+      !isConnected ||
+      occupied ||
+      pendingRole !== null;
+
+    if (occupied) {
+
+      button.textContent = k + "（使用中）";
+
+    } else {
+
+      button.textContent = k;
+    }
+  });
+}
 
 // =====================
-
+// 担当選択
 function startApp(role) {
 
+  if (!socket || !isConnected) {
+    return;
+  }
 
+  if (connectedRoles[role]) {
+    return;
+  }
 
-&#x20; myRole = role;
+  if (pendingRole !== null) {
+    return;
+  }
 
+  pendingRole = role;
 
+  updateRoleButtons();
 
-&#x20; document.getElementById("role-select").style.display = "none";
-
-&#x20; document.getElementById("app").style.display = "block";
-
-
-
-&#x20; createLayout();
-
-&#x20; createInputs();
-
-&#x20; setGuideLine();
-
-&#x20; connectSocket();
-
+  socket.emit("register", {
+    key:role
+  });
 }
 
+// =====================
+// 担当登録成功後に画面を開く
+function openApp(role) {
 
+  myRole = role;
+  pendingRole = null;
+
+  document.getElementById("role-select").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  createLayout();
+  createInputs();
+  setGuideLine();
+
+  updateUI();
+}
 
 // =====================
-
 function createLayout() {
 
+  document.getElementById("app").innerHTML = `
+    <div style="display:flex; gap:20px;">
 
+      <div id="columns"></div>
 
-&#x20; document.getElementById("app").innerHTML = `
+      <div>
+        <h3>ログ</h3>
 
-&#x20;   <div style="display:flex; gap:20px;">
+        <div id="log" class="fixed" style="
+          height:400px;
+          overflow-y:scroll;
+          border:1px solid white;
+          padding:4px;
+          white-space:pre-wrap;
+          overflow-wrap:anywhere;
+        "></div>
+      </div>
 
+      <div>
+        <h3>検索</h3>
 
+        <iframe
+          id="searchFrame"
+          style="
+            width:600px;
+            height:400px;
+            border:1px solid white;
+          ">
+        </iframe>
+      </div>
 
-&#x20;     <div id="columns"></div>
-
-
-
-&#x20;     <div>
-
-&#x20;       <h3>ログ</h3>
-
-
-
-&#x20;       <div id="log" class="fixed" style="
-
-&#x20;         height:400px;
-
-&#x20;         overflow-y:scroll;
-
-&#x20;         border:1px solid white;
-
-&#x20;         padding:4px;
-
-&#x20;         white-space:pre-wrap;
-
-&#x20;         overflow-wrap:anywhere;
-
-&#x20;       "></div>
-
-&#x20;     </div>
-
-
-
-&#x20;     <div>
-
-&#x20;       <h3>検索</h3>
-
-
-
-&#x20;       <iframe
-
-&#x20;         id="searchFrame"
-
-&#x20;         style="
-
-&#x20;           width:600px;
-
-&#x20;           height:400px;
-
-&#x20;           border:1px solid white;
-
-&#x20;         ">
-
-&#x20;       </iframe>
-
-&#x20;     </div>
-
-
-
-&#x20;   </div>
-
-&#x20; `;
-
+    </div>
+  `;
 }
 
-
-
 // =====================
-
 function getOrder() {
 
+  if (myRole === "A") return ["C","A","B"];
+  if (myRole === "B") return ["A","B","C"];
+  if (myRole === "C") return ["B","C","A"];
 
-
-&#x20; if (myRole === "A") return \["C","A","B"];
-
-&#x20; if (myRole === "B") return \["A","B","C"];
-
-&#x20; if (myRole === "C") return \["B","C","A"];
-
-
-
-&#x20; return \["A","B","C"];
-
+  return ["A","B","C"];
 }
 
-
-
 // =====================
-
 function createInputs() {
 
-
-
-&#x20; const columns = document.getElementById("columns");
-
-
-
-&#x20; columns.innerHTML = getOrder().map(k => `
-
-&#x20;   <div style="
-
-&#x20;     display:flex;
-
-&#x20;     gap:10px;
-
-&#x20;     margin-bottom:20px;
-
-&#x20;   ">
-
-
-
-&#x20;     <div
-
-&#x20;       id="label-${k}"
-
-&#x20;       style="
-
-&#x20;         width:40px;
-
-&#x20;         height:180px;
-
-&#x20;         display:flex;
-
-&#x20;         align-items:center;
-
-&#x20;         justify-content:center;
-
-&#x20;         background:#555;
-
-&#x20;         color:white;
-
-&#x20;       ">
-
-&#x20;     </div>
-
-
-
-&#x20;     <textarea id="input-${k}" class="fixed" style="height:180px;"></textarea>
-
-
-
-&#x20;   </div>
-
-&#x20; `).join("");
-
-
-
-&#x20; \["A","B","C"].forEach(k => {
-
-
-
-&#x20;   const input = document.getElementById("input-" + k);
-
-
-
-&#x20;   input.oncompositionstart = () => {
-
-
-
-&#x20;     if (k === myRole) {
-
-&#x20;       isComposing = true;
-
-&#x20;     }
-
-&#x20;   };
-
-
-
-&#x20;   input.oncompositionend = () => {
-
-
-
-&#x20;     if (k === myRole) {
-
-&#x20;       setTimeout(() => {
-
-&#x20;         isComposing = false;
-
-&#x20;         updateUI();
-
-&#x20;       }, 0);
-
-&#x20;     }
-
-&#x20;   };
-
-
-
-&#x20;   input.oninput = e => {
-
-
-
-&#x20;     inputs\[k] = e.target.value;
-
-
-
-&#x20;     if (socket \&\& isConnected) {
-
-
-
-&#x20;       socket.emit("typing", {
-
-&#x20;         key:k,
-
-&#x20;         value:e.target.value
-
-&#x20;       });
-
-&#x20;     }
-
-&#x20;   };
-
-&#x20; });
-
-
-
-&#x20; updateUI();
-
+  const columns = document.getElementById("columns");
+
+  columns.innerHTML = getOrder().map(k => `
+    <div style="
+      display:flex;
+      gap:10px;
+      margin-bottom:20px;
+    ">
+
+      <div
+        id="label-${k}"
+        style="
+          width:40px;
+          height:180px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:#555;
+          color:white;
+        ">
+      </div>
+
+      <textarea id="input-${k}" class="fixed" style="height:180px;"></textarea>
+
+    </div>
+  `).join("");
+
+  ["A","B","C"].forEach(k => {
+
+    document.getElementById("input-" + k).oninput = e => {
+
+      inputs[k] = e.target.value;
+
+      if (socket && isConnected) {
+
+        socket.emit("typing", {
+          key:k,
+          value:e.target.value
+        });
+      }
+    };
+  });
+
+  updateUI();
 }
 
-
-
 // =====================
-
 function setGuideLine() {
 
+  const span = document.createElement("span");
 
+  span.style.font = "24px Consolas";
+  span.innerText = "あ".repeat(15.5);
 
-&#x20; const span = document.createElement("span");
+  document.body.appendChild(span);
 
+  const w = span.getBoundingClientRect().width;
 
+  document.body.removeChild(span);
 
-&#x20; span.style.font = "24px Consolas";
+  document.querySelectorAll("textarea").forEach(el => {
 
-&#x20; span.innerText = "あ".repeat(15.5);
-
-
-
-&#x20; document.body.appendChild(span);
-
-
-
-&#x20; const w = span.getBoundingClientRect().width;
-
-
-
-&#x20; document.body.removeChild(span);
-
-
-
-&#x20; document.querySelectorAll("textarea").forEach(el => {
-
-
-
-&#x20;   el.style.backgroundImage = `
-
-&#x20;     linear-gradient(
-
-&#x20;       to right,
-
-&#x20;       transparent ${w}px,
-
-&#x20;       red ${w}px,
-
-&#x20;       red ${w + 1}px,
-
-&#x20;       transparent ${w + 1}px
-
-&#x20;     )
-
-&#x20;   `;
-
-&#x20; });
-
+    el.style.backgroundImage = `
+      linear-gradient(
+        to right,
+        transparent ${w}px,
+        red ${w}px,
+        red ${w + 1}px,
+        transparent ${w + 1}px
+      )
+    `;
+  });
 }
 
-
-
 // =====================
-
 function connectSocket() {
 
+  socket = io("https://subtitle-server-czoz.onrender.com");
 
+  // =====================
+  socket.on("connect", () => {
 
-&#x20; socket = io("https://subtitle-server-czoz.onrender.com");
+    isConnected = true;
 
+    updateRoleButtons();
 
+    // アプリ使用中にSocket再接続した場合
+    if (myRole) {
 
-&#x20; // =====================
+      socket.emit("register", {
+        key:myRole
+      });
+    }
+  });
 
-&#x20; socket.on("connect", () => {
+  // =====================
+  socket.on("disconnect", () => {
 
+    isConnected = false;
+    pendingRole = null;
 
+    if (myRole) {
+      connectedRoles[myRole] = false;
+    }
 
-&#x20;   isConnected = true;
+    updateRoleButtons();
+    updateUI();
+  });
 
+  // =====================
+  socket.on("register-success", ({key}) => {
 
+    pendingRole = null;
 
-&#x20;   socket.emit("register", {
+    // 初回担当選択時のみ画面を作成
+    if (!myRole) {
+      openApp(key);
+    }
 
-&#x20;     key:myRole
+    connectedRoles[key] = true;
 
-&#x20;   });
+    updateRoleButtons();
+    updateUI();
+  });
 
-&#x20; });
+  // =====================
+  socket.on("register-error", ({key,reason}) => {
 
+    pendingRole = null;
 
+    if (!myRole && reason === "occupied") {
 
-&#x20; // =====================
+      connectedRoles[key] = true;
 
-&#x20; socket.on("disconnect", () => {
+      alert(
+        key +
+        "はすでに使用中です。別の担当を選択してください。"
+      );
+    }
 
+    updateRoleButtons();
+    updateUI();
+  });
 
+  // =====================
+  socket.on("presence", presence => {
 
-&#x20;   isConnected = false;
+    connectedRoles = {
+      A:!!presence.A,
+      B:!!presence.B,
+      C:!!presence.C
+    };
 
+    // 未接続になった他担当の古い入力内容を消す
+    ["A","B","C"].forEach(k => {
 
+      if (k !== myRole && !connectedRoles[k]) {
+        inputs[k] = "";
+      }
+    });
 
-&#x20;   if (myRole) {
+    updateRoleButtons();
+    updateUI();
+  });
 
-&#x20;     connectedRoles\[myRole] = false;
+  // =====================
+  socket.on("typing", ({key,value}) => {
 
-&#x20;   }
+    inputs[key] = value;
 
+    updateUI();
+  });
 
+  // =====================
+  socket.on("log", data => {
 
-&#x20;   updateUI();
+    log.push(data);
 
-&#x20; });
+    updateUI();
+  });
 
+  // =====================
+  socket.on("active", next => {
 
+    active = next;
 
-&#x20; // =====================
-
-&#x20; socket.on("presence", presence => {
-
-
-
-&#x20;   connectedRoles = {
-
-&#x20;     A:!!presence.A,
-
-&#x20;     B:!!presence.B,
-
-&#x20;     C:!!presence.C
-
-&#x20;   };
-
-
-
-&#x20;   // 未接続になった他担当の古い入力内容を消す
-
-&#x20;   \["A","B","C"].forEach(k => {
-
-
-
-&#x20;     if (k !== myRole \&\& !connectedRoles\[k]) {
-
-&#x20;       inputs\[k] = "";
-
-&#x20;     }
-
-&#x20;   });
-
-
-
-&#x20;   updateUI();
-
-&#x20; });
-
-
-
-&#x20; // =====================
-
-&#x20; socket.on("typing", ({key,value}) => {
-
-
-
-&#x20;   inputs\[key] = value;
-
-
-
-&#x20;   updateUI();
-
-&#x20; });
-
-
-
-&#x20; // =====================
-
-&#x20; socket.on("log", data => {
-
-
-
-&#x20;   log.push(data);
-
-
-
-&#x20;   updateUI();
-
-&#x20; });
-
-
-
-&#x20; // =====================
-
-&#x20; socket.on("active", next => {
-
-
-
-&#x20;   active = next;
-
-
-
-&#x20;   updateUI();
-
-&#x20; });
-
+    updateUI();
+  });
 }
 
-
-
 // =====================
-
 function updateUI() {
 
+  ["A","B","C"].forEach(k => {
 
+    const label = document.getElementById("label-" + k);
+    const input = document.getElementById("input-" + k);
 
-&#x20; // IMEの最終置換が完了するまで画面を書き換えない
+    if (!label || !input) {
+      return;
+    }
 
-&#x20; if (isComposing) {
+    const online = connectedRoles[k];
 
-&#x20;   return;
+    // =====================
+    // 担当ラベル
 
-&#x20; }
+    label.textContent = k;
 
+    if (!online) {
 
+      label.style.background = "#333";
+      label.style.color = "#777";
+      label.title = "未接続";
 
-&#x20; \["A","B","C"].forEach(k => {
+    } else if (active === k) {
 
+      label.style.background = "#0a0";
+      label.style.color = "white";
+      label.title = "送信担当";
 
+    } else {
 
-&#x20;   const label = document.getElementById("label-" + k);
+      label.style.background = "#555";
+      label.style.color = "white";
+      label.title = "接続中";
+    }
 
-&#x20;   const input = document.getElementById("input-" + k);
+    // =====================
+    // 入力欄
 
+    input.readOnly = (
+      myRole !== k ||
+      !online
+    );
 
+    if (!online) {
 
-&#x20;   if (!label || !input) {
+      input.style.backgroundColor = "#2a2a2a";
+      input.style.color = "#777";
+      input.style.borderColor = "#444";
 
-&#x20;     return;
+      input.placeholder = "未接続";
 
-&#x20;   }
+    } else {
 
+      input.style.backgroundColor = "";
+      input.style.color = "";
+      input.style.borderColor = "";
 
+      input.placeholder = "";
+    }
 
-&#x20;   const online = connectedRoles\[k];
+    // 自分以外の入力欄だけ同期
+    if (k !== myRole) {
+      input.value = inputs[k] || "";
+    }
+  });
 
+  // =====================
+  // ログ
 
+  const logEl = document.getElementById("log");
 
-&#x20;   // =====================
+  if (logEl) {
 
-&#x20;   // 担当ラベル
+    logEl.textContent =
+      log
+        .map(l =>
+          String(l.text || "")
+            .replace(/。/g,"｡")
+        )
+        .join("\n");
 
-&#x20;   label.textContent = k;
-
-
-
-&#x20;   if (!online) {
-
-
-
-&#x20;     // 未接続
-
-&#x20;     label.style.background = "#333";
-
-&#x20;     label.style.color = "#777";
-
-&#x20;     label.title = "未接続";
-
-
-
-&#x20;   } else if (active === k) {
-
-
-
-&#x20;     // 現在の送信担当
-
-&#x20;     label.style.background = "#0a0";
-
-&#x20;     label.style.color = "white";
-
-&#x20;     label.title = "送信担当";
-
-
-
-&#x20;   } else {
-
-
-
-&#x20;     // 接続中
-
-&#x20;     label.style.background = "#555";
-
-&#x20;     label.style.color = "white";
-
-&#x20;     label.title = "接続中";
-
-&#x20;   }
-
-
-
-&#x20;   // =====================
-
-&#x20;   // 入力欄
-
-
-
-&#x20;   input.readOnly = (
-
-&#x20;     myRole !== k ||
-
-&#x20;     !online
-
-&#x20;   );
-
-
-
-&#x20;   if (!online) {
-
-
-
-&#x20;     input.style.backgroundColor = "#2a2a2a";
-
-&#x20;     input.style.color = "#777";
-
-&#x20;     input.style.borderColor = "#444";
-
-
-
-&#x20;     input.placeholder = "未接続";
-
-
-
-&#x20;   } else {
-
-
-
-&#x20;     input.style.backgroundColor = "";
-
-&#x20;     input.style.color = "";
-
-&#x20;     input.style.borderColor = "";
-
-
-
-&#x20;     input.placeholder = "";
-
-&#x20;   }
-
-
-
-&#x20;   // 自分以外の入力欄だけ同期
-
-&#x20;   if (k !== myRole) {
-
-&#x20;     input.value = inputs\[k] || "";
-
-&#x20;   }
-
-&#x20; });
-
-
-
-&#x20; // =====================
-
-&#x20; // ログ
-
-
-
-&#x20; const logEl = document.getElementById("log");
-
-
-
-&#x20; if (logEl) {
-
-
-
-&#x20;   logEl.textContent =
-
-&#x20;     log
-
-&#x20;       .map(l =>
-
-&#x20;         String(l.text || "")
-
-&#x20;           .replace(/。/g,"｡")
-
-&#x20;       )
-
-&#x20;       .join("\\n");
-
-
-
-&#x20;   logEl.scrollTop = logEl.scrollHeight;
-
-&#x20; }
-
+    logEl.scrollTop = logEl.scrollHeight;
+  }
 }
 
-
-
 // =====================
-
 function send() {
 
+  if (!isConnected) {
+    return;
+  }
 
+  if (!myRole) {
+    return;
+  }
 
-&#x20; if (!isConnected) {
+  if (!connectedRoles[myRole]) {
+    return;
+  }
 
-&#x20;   return;
+  if (active !== myRole) {
+    return;
+  }
 
-&#x20; }
+  const text = inputs[myRole] || "";
 
+  inputs[myRole] = "";
 
+  document.getElementById(
+    "input-" + myRole
+  ).value = "";
 
-&#x20; if (!myRole) {
+  socket.emit("send", {
+    key:myRole,
+    text
+  });
 
-&#x20;   return;
+  socket.emit("typing", {
+    key:myRole,
+    value:""
+  });
 
-&#x20; }
-
-
-
-&#x20; if (!connectedRoles\[myRole]) {
-
-&#x20;   return;
-
-&#x20; }
-
-
-
-&#x20; if (active !== myRole) {
-
-&#x20;   return;
-
-&#x20; }
-
-
-
-&#x20; const text = inputs\[myRole] || "";
-
-
-
-&#x20; inputs\[myRole] = "";
-
-
-
-&#x20; document.getElementById(
-
-&#x20;   "input-" + myRole
-
-&#x20; ).value = "";
-
-
-
-&#x20; socket.emit("send", {
-
-&#x20;   key:myRole,
-
-&#x20;   text
-
-&#x20; });
-
-
-
-&#x20; socket.emit("typing", {
-
-&#x20;   key:myRole,
-
-&#x20;   value:""
-
-&#x20; });
-
-
-
-&#x20; updateUI();
-
+  updateUI();
 }
 
-
-
 // =====================
-
 function bindGlobalKeys() {
 
-
-
-&#x20; document.addEventListener(
-
-&#x20;   "keydown",
-
-&#x20;   handleKey
-
-&#x20; );
-
+  document.addEventListener(
+    "keydown",
+    handleKey
+  );
 }
-
-
 
 // =====================
-
 function handleKey(e) {
 
-
-
-&#x20; // =====================
-
-&#x20; // F12送信
-
-
-
-&#x20; if (e.key === "F12") {
-
-
-
-&#x20;   e.preventDefault();
-
-
-
-&#x20;   if (
-
-&#x20;     myRole \&\&
-
-&#x20;     active === myRole
-
-&#x20;   ) {
-
-&#x20;     send();
-
-&#x20;   }
-
-&#x20; }
-
-
-
-&#x20; // =====================
-
-&#x20; // F4検索
-
-
-
-&#x20; if (e.key === "F4") {
-
-
-
-&#x20;   e.preventDefault();
-
-
-
-&#x20;   const input =
-
-&#x20;     document.getElementById(
-
-&#x20;       "input-" + myRole
-
-&#x20;     );
-
-
-
-&#x20;   const frame =
-
-&#x20;     document.getElementById(
-
-&#x20;       "searchFrame"
-
-&#x20;     );
-
-
-
-&#x20;   if (!input || !frame) {
-
-&#x20;     return;
-
-&#x20;   }
-
-
-
-&#x20;   const text =
-
-&#x20;     input.value.substring(
-
-&#x20;       input.selectionStart,
-
-&#x20;       input.selectionEnd
-
-&#x20;     );
-
-
-
-&#x20;   if (!text) {
-
-&#x20;     return;
-
-&#x20;   }
-
-
-
-&#x20;   frame.src =
-
-&#x20;     "https://www.bing.com/search?q=" +
-
-&#x20;     encodeURIComponent(text);
-
-&#x20; }
-
+  // =====================
+  // F12送信
+
+  if (e.key === "F12") {
+
+    e.preventDefault();
+
+    if (
+      myRole &&
+      active === myRole
+    ) {
+      send();
+    }
+  }
+
+  // =====================
+  // F4検索
+
+  if (e.key === "F4") {
+
+    e.preventDefault();
+
+    const input =
+      document.getElementById(
+        "input-" + myRole
+      );
+
+    const frame =
+      document.getElementById(
+        "searchFrame"
+      );
+
+    if (!input || !frame) {
+      return;
+    }
+
+    const text =
+      input.value.substring(
+        input.selectionStart,
+        input.selectionEnd
+      );
+
+    if (!text) {
+      return;
+    }
+
+    frame.src =
+      "https://www.bing.com/search?q=" +
+      encodeURIComponent(text);
+  }
 }
-
-
 
 </script>
 
-
-
 </body>
-
 </html>
-
