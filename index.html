@@ -57,6 +57,9 @@ let connectedRoles = {
 
 let log = [];
 
+// IME変換中か判定
+let isComposing = false;
+
 // =====================
 window.addEventListener("DOMContentLoaded", init);
 
@@ -167,7 +170,23 @@ function createInputs() {
 
   ["A","B","C"].forEach(k => {
 
-    document.getElementById("input-" + k).oninput = e => {
+    const input = document.getElementById("input-" + k);
+
+    input.oncompositionstart = () => {
+
+      if (k === myRole) {
+        isComposing = true;
+      }
+    };
+
+    input.oncompositionend = () => {
+
+      if (k === myRole) {
+        isComposing = false;
+      }
+    };
+
+    input.oninput = e => {
 
       inputs[k] = e.target.value;
 
@@ -322,6 +341,14 @@ function updateUI() {
       label.style.background = "#555";
       label.style.color = "white";
       label.title = "接続中";
+    }
+
+    // IME変換中は本人の入力欄へ触れない
+    if (
+      k === myRole &&
+      isComposing
+    ) {
+      return;
     }
 
     // =====================
