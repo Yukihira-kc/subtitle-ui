@@ -20,17 +20,6 @@ body {
   line-height:34px;
   box-sizing:border-box;
 }
-
-.role-button {
-  min-width:80px;
-  padding:8px 16px;
-  margin-right:8px;
-}
-
-.role-button:disabled {
-  opacity:0.35;
-  cursor:not-allowed;
-}
 </style>
 </head>
 
@@ -38,10 +27,9 @@ body {
 
 <div id="role-select">
   <h2>担当を選択</h2>
-
-  <button id="btnA" class="role-button">A</button>
-  <button id="btnB" class="role-button">B</button>
-  <button id="btnC" class="role-button">C</button>
+  <button id="btnA">A</button>
+  <button id="btnB">B</button>
+  <button id="btnC">C</button>
 </div>
 
 <div id="app" style="display:none"></div>
@@ -52,7 +40,6 @@ body {
 let socket;
 let isConnected = false;
 let myRole = null;
-let pendingRole = null;
 
 let inputs = {
   A:"",
@@ -74,11 +61,8 @@ let log = [];
 window.addEventListener("DOMContentLoaded", init);
 
 function init() {
-
   bindRoleButtons();
   bindGlobalKeys();
-  connectSocket();
-  updateRoleButtons();
 }
 
 // =====================
@@ -90,66 +74,9 @@ function bindRoleButtons() {
 }
 
 // =====================
-// 担当選択ボタン更新
-function updateRoleButtons() {
-
-  ["A","B","C"].forEach(k => {
-
-    const button = document.getElementById("btn" + k);
-
-    if (!button) {
-      return;
-    }
-
-    const occupied = connectedRoles[k];
-
-    button.disabled =
-      !isConnected ||
-      occupied ||
-      pendingRole !== null;
-
-    if (occupied) {
-
-      button.textContent = k + "（使用中）";
-
-    } else {
-
-      button.textContent = k;
-    }
-  });
-}
-
-// =====================
-// 担当選択
 function startApp(role) {
 
-  if (!socket || !isConnected) {
-    return;
-  }
-
-  if (connectedRoles[role]) {
-    return;
-  }
-
-  if (pendingRole !== null) {
-    return;
-  }
-
-  pendingRole = role;
-
-  updateRoleButtons();
-
-  socket.emit("register", {
-    key:role
-  });
-}
-
-// =====================
-// 担当登録成功後に画面を開く
-function openApp(role) {
-
   myRole = role;
-  pendingRole = null;
 
   document.getElementById("role-select").style.display = "none";
   document.getElementById("app").style.display = "block";
@@ -157,8 +84,7 @@ function openApp(role) {
   createLayout();
   createInputs();
   setGuideLine();
-
-  updateUI();
+  connectSocket();
 }
 
 // =====================
@@ -296,63 +222,20 @@ function connectSocket() {
 
     isConnected = true;
 
-    updateRoleButtons();
-
-    // アプリ使用中にSocket再接続した場合
-    if (myRole) {
-
-      socket.emit("register", {
-        key:myRole
-      });
-    }
+    socket.emit("register", {
+      key:myRole
+    });
   });
 
   // =====================
   socket.on("disconnect", () => {
 
     isConnected = false;
-    pendingRole = null;
 
     if (myRole) {
       connectedRoles[myRole] = false;
     }
 
-    updateRoleButtons();
-    updateUI();
-  });
-
-  // =====================
-  socket.on("register-success", ({key}) => {
-
-    pendingRole = null;
-
-    // 初回担当選択時のみ画面を作成
-    if (!myRole) {
-      openApp(key);
-    }
-
-    connectedRoles[key] = true;
-
-    updateRoleButtons();
-    updateUI();
-  });
-
-  // =====================
-  socket.on("register-error", ({key,reason}) => {
-
-    pendingRole = null;
-
-    if (!myRole && reason === "occupied") {
-
-      connectedRoles[key] = true;
-
-      alert(
-        key +
-        "はすでに使用中です。別の担当を選択してください。"
-      );
-    }
-
-    updateRoleButtons();
     updateUI();
   });
 
@@ -373,7 +256,6 @@ function connectSocket() {
       }
     });
 
-    updateRoleButtons();
     updateUI();
   });
 
@@ -418,23 +300,25 @@ function updateUI() {
 
     // =====================
     // 担当ラベル
-
     label.textContent = k;
 
     if (!online) {
 
+      // 未接続
       label.style.background = "#333";
       label.style.color = "#777";
       label.title = "未接続";
 
     } else if (active === k) {
 
+      // 現在の送信担当
       label.style.background = "#0a0";
       label.style.color = "white";
       label.title = "送信担当";
 
     } else {
 
+      // 接続中
       label.style.background = "#555";
       label.style.color = "white";
       label.title = "接続中";
