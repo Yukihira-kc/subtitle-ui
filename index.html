@@ -182,7 +182,10 @@ function createInputs() {
     input.oncompositionend = () => {
 
       if (k === myRole) {
-        isComposing = false;
+        setTimeout(() => {
+          isComposing = false;
+          updateUI();
+        }, 0);
       }
     };
 
@@ -306,6 +309,11 @@ function connectSocket() {
 // =====================
 function updateUI() {
 
+  // IMEの最終置換が完了するまで画面を書き換えない
+  if (isComposing) {
+    return;
+  }
+
   ["A","B","C"].forEach(k => {
 
     const label = document.getElementById("label-" + k);
@@ -341,14 +349,6 @@ function updateUI() {
       label.style.background = "#555";
       label.style.color = "white";
       label.title = "接続中";
-    }
-
-    // IME変換中は本人の入力欄へ触れない
-    if (
-      k === myRole &&
-      isComposing
-    ) {
-      return;
     }
 
     // =====================
