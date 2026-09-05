@@ -8,9 +8,42 @@
 
 <style>
 body {
-  background:#111;
-  color:white;
+  --page-bg:#111;
+  --page-text:#fff;
+  --border:#fff;
+  --offline-bg:#2a2a2a;
+  --offline-text:#777;
+  --offline-border:#444;
+  --label-offline-bg:#333;
+  --label-bg:#555;
+  --label-text:#fff;
+  background:var(--page-bg);
+  color:var(--page-text);
   font-family:Meiryo, monospace;
+}
+
+body.light-theme {
+  --page-bg:#fff;
+  --page-text:#000;
+  --border:#555;
+  --offline-bg:#eee;
+  --offline-text:#666;
+  --offline-border:#bbb;
+  --label-offline-bg:#ddd;
+  --label-bg:#ddd;
+  --label-text:#000;
+}
+
+textarea, button {
+  background-color:var(--page-bg);
+  color:var(--page-text);
+  border:1px solid var(--border);
+}
+
+#theme-toggle {
+  margin-bottom:8px;
+  padding:6px 12px;
+  cursor:pointer;
 }
 
 .fixed {
@@ -24,6 +57,8 @@ body {
 </head>
 
 <body>
+
+<button id="theme-toggle" type="button" aria-pressed="false">白背景に切替</button>
 
 <div id="role-select">
   <h2>担当を選択</h2>
@@ -61,8 +96,31 @@ let log = [];
 window.addEventListener("DOMContentLoaded", init);
 
 function init() {
+  initTheme();
   bindRoleButtons();
   bindGlobalKeys();
+}
+
+// テーマはこのブラウザだけに保存し、他担当には送信しない。
+function initTheme() {
+  const button = document.getElementById("theme-toggle");
+  function applyTheme(light) {
+    document.body.classList.toggle("light-theme", light);
+    button.textContent = light ? "黒背景に切替" : "白背景に切替";
+    button.setAttribute("aria-pressed", String(light));
+  }
+  let light = false;
+  try {
+    light = localStorage.getItem("subtitle-collab-theme") === "light";
+  } catch (_) { /* 保存不可でも切替は利用可能 */ }
+  applyTheme(light);
+  button.onclick = () => {
+    const next = !document.body.classList.contains("light-theme");
+    applyTheme(next);
+    try {
+      localStorage.setItem("subtitle-collab-theme", next ? "light" : "dark");
+    } catch (_) { /* 保存不可でも切替は利用可能 */ }
+  };
 }
 
 // =====================
@@ -101,7 +159,7 @@ function createLayout() {
         <div id="log" class="fixed" style="
           height:400px;
           overflow-y:scroll;
-          border:1px solid white;
+          border:1px solid var(--border);
           padding:4px;
           white-space:pre-wrap;
           overflow-wrap:anywhere;
@@ -109,14 +167,14 @@ function createLayout() {
       </div>
 
       <div>
-        <h3>検索</h3>
+        <h3>検索（選択中テキストをF4）</h3>
 
         <iframe
           id="searchFrame"
           style="
             width:600px;
             height:400px;
-            border:1px solid white;
+            border:1px solid var(--border);
           ">
         </iframe>
       </div>
@@ -305,8 +363,8 @@ function updateUI() {
     if (!online) {
 
       // 未接続
-      label.style.background = "#333";
-      label.style.color = "#777";
+      label.style.background = "var(--label-offline-bg)";
+      label.style.color = "var(--offline-text)";
       label.title = "未接続";
 
     } else if (active === k) {
@@ -319,8 +377,8 @@ function updateUI() {
     } else {
 
       // 接続中
-      label.style.background = "#555";
-      label.style.color = "white";
+      label.style.background = "var(--label-bg)";
+      label.style.color = "var(--label-text)";
       label.title = "接続中";
     }
 
@@ -334,9 +392,9 @@ function updateUI() {
 
     if (!online) {
 
-      input.style.backgroundColor = "#2a2a2a";
-      input.style.color = "#777";
-      input.style.borderColor = "#444";
+      input.style.backgroundColor = "var(--offline-bg)";
+      input.style.color = "var(--offline-text)";
+      input.style.borderColor = "var(--offline-border)";
 
       input.placeholder = "未接続";
 
@@ -362,15 +420,40 @@ function updateUI() {
 
   if (logEl) {
 
-    logEl.textContent =
+    const nextText =
       log
         .map(l =>
           String(l.text || "")
-            .replace(/。/g,"｡")
+            .replace(/。(?=\r\n|\r|\n|$)/g,"｡")
         )
         .join("\n");
 
-    logEl.scrollTop = logEl.scrollHeight;
+    const currentText = logEl.textContent;
+    // typing通知ではログのDOMもスクロール位置も変更しない。
+    if (nextText !== currentText) {
+      const selection = window.getSelection();
+      let selectingLog = false;
+      if (selection && !selection.isCollapsed) {
+        for (let i = 0; i < selection.rangeCount; i++) {
+          if (selection.getRangeAt(i).intersectsNode(logEl)) {
+            selectingLog = true;
+            break;
+          }
+        }
+      }
+      const followBottom = !selectingLog &&
+        logEl.scrollHeight - logEl.clientHeight - logEl.scrollTop <= 2;
+
+      // 既存テキストノードを残し、新規ログだけ末尾へ追加する。
+      if (nextText.startsWith(currentText)) {
+        logEl.appendChild(document.createTextNode(nextText.slice(currentText.length)));
+      } else {
+        logEl.textContent = nextText;
+      }
+      if (followBottom) {
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+    }
   }
 }
 
