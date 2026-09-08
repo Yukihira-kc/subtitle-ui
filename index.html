@@ -3,23 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>字幕コラボ</title>
+<title>字幕コラボ v24</title>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js"></script>
+<script src="shared.js"></script>
+<script src="pagination.js"></script>
+<link rel="stylesheet" href="operator.css">
 
 <style>
-*,
-*::before,
-*::after {
-  box-sizing:border-box;
-}
-
-html {
-  width:100%;
-  height:100%;
-  overflow:hidden;
-}
-
 body {
   --page-bg:#111;
   --page-text:#fff;
@@ -30,18 +21,6 @@ body {
   --label-offline-bg:#333;
   --label-bg:#555;
   --label-text:#fff;
-
-  margin:0;
-  padding:8px;
-  width:100%;
-  height:100vh;
-  height:100dvh;
-  min-width:0;
-  min-height:0;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  overflow:hidden;
   background:var(--page-bg);
   color:var(--page-text);
   font-family:Meiryo, monospace;
@@ -59,205 +38,45 @@ body.light-theme {
   --label-text:#000;
 }
 
-textarea,
-button {
+textarea, button {
   background-color:var(--page-bg);
   color:var(--page-text);
   border:1px solid var(--border);
 }
 
-button {
-  font:inherit;
+#theme-toggle {
+  margin-bottom:8px;
+  padding:6px 12px;
   cursor:pointer;
 }
 
-#toolbar {
-  flex:0 0 auto;
-}
-
-#theme-toggle {
-  padding:6px 12px;
-}
-
-#role-select {
-  min-height:0;
-  overflow:auto;
-}
-
-#role-select h2 {
-  margin:8px 0;
-}
-
-#role-select button {
-  padding:8px 18px;
-}
-
-#app {
-  display:none;
-  flex:1 1 0;
-  width:100%;
-  min-width:0;
-  min-height:0;
-  overflow:hidden;
-}
-
-#workspace {
-  display:grid;
-  grid-template-columns:
-    minmax(0,1.15fr)
-    minmax(0,1fr)
-    minmax(0,1fr);
-  grid-template-rows:minmax(0,1fr);
-  gap:10px;
-  width:100%;
-  height:100%;
-  min-width:0;
-  min-height:0;
-  overflow:hidden;
-}
-
-#workspace > section {
-  min-width:0;
-  min-height:0;
-  overflow:hidden;
-}
-
-#columns {
-  display:grid;
-  grid-template-columns:minmax(0,1fr);
-  grid-template-rows:repeat(3,minmax(0,1fr));
-  gap:10px;
-}
-
-.input-row {
-  display:grid;
-  grid-template-columns:32px minmax(0,1fr);
-  grid-template-rows:minmax(0,1fr);
-  gap:6px;
-  min-width:0;
-  min-height:0;
-  overflow:hidden;
-}
-
-.role-label {
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-width:0;
-  min-height:0;
-  background:var(--label-bg);
-  color:var(--label-text);
-}
-
 .fixed {
+  width:496px;
   font-family:Consolas, monospace;
   font-size:24px;
   line-height:34px;
-}
-
-.input-row textarea {
-  display:block;
-  width:100%;
-  height:100%;
-  min-width:0;
-  min-height:0;
-  margin:0;
-  padding:4px;
-  resize:none;
-  overflow-x:hidden;
-  overflow-y:scroll;
-  scrollbar-gutter:stable;
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-}
-
-#log-panel,
-#search-panel {
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-#log-panel h3,
-#search-panel h3 {
-  flex:0 0 auto;
-  margin:0;
-  font-size:16px;
-  line-height:1.5;
-  overflow-wrap:anywhere;
-}
-
-#log {
-  flex:1 1 0;
-  width:100%;
-  min-width:0;
-  min-height:0;
-  padding:4px;
-  border:1px solid var(--border);
-  overflow-x:hidden;
-  overflow-y:scroll;
-  scrollbar-gutter:stable;
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-}
-
-/*
-  iframe自身の枠線もwidth:100%に含める。
-  検索ページのスクロールバーはiframeの内側に表示する。
-*/
-#searchFrame {
-  display:block;
-  flex:1 1 0;
-  width:100%;
-  min-width:0;
-  min-height:0;
-  height:0;
-  margin:0;
-  border:1px solid var(--border);
-}
-
-@media (max-width:1100px) {
-  #workspace {
-    gap:6px;
-  }
-
-  .input-row {
-    grid-template-columns:26px minmax(0,1fr);
-    gap:4px;
-  }
-
-  #columns {
-    gap:6px;
-  }
-
-  #log-panel h3,
-  #search-panel h3 {
-    font-size:14px;
-  }
+  box-sizing:border-box;
 }
 </style>
 </head>
 
 <body>
-
-<div id="toolbar">
-  <button
-    id="theme-toggle"
-    type="button"
-    aria-pressed="false"
-  >白背景に切替</button>
-</div>
+<div id="toolbar"><small id="version">v24</small>
+<button id="theme-toggle" type="button" aria-pressed="false">白背景に切替</button>
+<span id="column-status">1行20文字</span><a href="reviewer.html" target="_blank">校閲画面</a></div>
 
 <div id="role-select">
   <h2>担当を選択</h2>
-  <button id="btnA" type="button">A</button>
-  <button id="btnB" type="button">B</button>
-  <button id="btnC" type="button">C</button>
+  <button id="btnA">A</button>
+  <button id="btnB">B</button>
+  <button id="btnC">C</button>
 </div>
 
-<div id="app"></div>
+<div id="app" style="display:none"></div>
 
 <script>
+
+// =====================
 let socket;
 let isConnected = false;
 let myRole = null;
@@ -277,7 +96,74 @@ let connectedRoles = {
 };
 
 let log = [];
+let sharedColumns = 20;
+let operatorComposing = false;
+let layoutPending = false;
+function applySharedColumns() {
+  document.getElementById('column-status').textContent='1行'+sharedColumns+'文字';
+  if(operatorComposing){layoutPending=true;return;}
+  layoutPending=false;
+  document.querySelectorAll('#columns textarea').forEach(el=>{
+    el.style.fontFamily=CaptionLayout.font;
+    const style=getComputedStyle(el),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
+    const available=el.clientWidth-padding;
+    // 設定文字数＋5文字分を確保できる文字サイズ。値・選択・IMEには触れない。
+    let size=24;
+    for(let attempt=0;attempt<12;attempt++){
+      el.style.fontSize=size+'px';
+      const actual=CaptionLayout.measure('あ'.repeat(sharedColumns+5),el);
+      if(actual<=available-2||size<=1)break;
+      size=Math.max(1,Math.min(size-.5,size*(available-2)/actual));
+    }
+    el.style.fontSize=size+'px';el.style.lineHeight='1.42';
+    const marker=document.getElementById('guide-'+el.id.slice(-1));
+    marker.style.fontFamily=CaptionLayout.font;marker.style.fontSize=size+'px';
+    marker.style.left=parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft)+'px';
+    marker.firstElementChild.textContent='あ'.repeat(sharedColumns);
+  });
+  const logEl=document.getElementById('log');
+  if(logEl){
+    const style=getComputedStyle(logEl);
+    const available=logEl.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+    logEl.style.fontFamily=CaptionLayout.font;
+    logEl.style.fontSize=Math.min(24,Math.max(1,(available-2)/(sharedColumns+.5)))+'px';
+  }
+  renderOperatorLog();
+}
 
+let renderedLogCount=0,renderedLogColumns=0;
+function logSelectionActive(){
+  const el=document.getElementById('log'),selection=window.getSelection();
+  if(!el||!selection||selection.isCollapsed)return false;
+  for(let i=0;i<selection.rangeCount;i++)if(selection.getRangeAt(i).intersectsNode(el))return true;
+  return false;
+}
+function renderOperatorLog(){
+  const el=document.getElementById('log');if(!el)return;
+  // 選択中の設定変更はコピーが終わってから反映する。
+  const selected=logSelectionActive();
+  if(renderedLogColumns!==sharedColumns&&selected)return;
+  const following=!selected&&el.scrollHeight-el.clientHeight-el.scrollTop<=2;
+  const top=el.scrollTop;
+  if(renderedLogColumns!==sharedColumns){el.replaceChildren();renderedLogCount=0;renderedLogColumns=sharedColumns;}
+  while(renderedLogCount<log.length){
+    const item=log[renderedLogCount++];
+    const entry=document.createElement('div');entry.className='log-entry';
+    const rows=CaptionPagination.rows([String(item.text||'')],sharedColumns);
+    rows.forEach((chars,i)=>{
+      const row=document.createElement('span');row.className='log-row';
+      chars.forEach(ch=>{const cell=document.createElement('span');cell.textContent=ch;cell.className='log-cell';cell.style.width=(/[｡､]/.test(ch)?'.5':'1')+'em';row.appendChild(cell);});
+      entry.appendChild(row);
+      if(i<rows.length-1)entry.appendChild(document.createTextNode('\n'));
+    });
+    if(el.childNodes.length)el.appendChild(document.createTextNode('\n'));
+    el.appendChild(entry);
+  }
+  el.scrollTop=following?el.scrollHeight:top;
+}
+document.addEventListener('selectionchange',()=>{if(!logSelectionActive()&&renderedLogColumns!==sharedColumns)renderOperatorLog();});
+
+// =====================
 window.addEventListener("DOMContentLoaded", init);
 
 function init() {
@@ -286,53 +172,39 @@ function init() {
   bindGlobalKeys();
 }
 
+// テーマはこのブラウザだけに保存し、他担当には送信しない。
 function initTheme() {
   const button = document.getElementById("theme-toggle");
-
   function applyTheme(light) {
     document.body.classList.toggle("light-theme", light);
-    button.textContent = light
-      ? "黒背景に切替"
-      : "白背景に切替";
+    button.textContent = light ? "黒背景に切替" : "白背景に切替";
     button.setAttribute("aria-pressed", String(light));
   }
-
   let light = false;
-
   try {
-    light =
-      localStorage.getItem("subtitle-collab-theme")
-      === "light";
-  } catch (_) {
-    // 保存できない環境でも切替可能。
-  }
-
+    light = localStorage.getItem("subtitle-collab-theme") === "light";
+  } catch (_) { /* 保存不可でも切替は利用可能 */ }
   applyTheme(light);
-
   button.onclick = () => {
-    const next =
-      !document.body.classList.contains("light-theme");
-
+    const next = !document.body.classList.contains("light-theme");
     applyTheme(next);
-
     try {
-      localStorage.setItem(
-        "subtitle-collab-theme",
-        next ? "light" : "dark"
-      );
-    } catch (_) {
-      // 保存できない環境でも切替可能。
-    }
+      localStorage.setItem("subtitle-collab-theme", next ? "light" : "dark");
+    } catch (_) { /* 保存不可でも切替は利用可能 */ }
   };
 }
 
+// =====================
 function bindRoleButtons() {
+
   document.getElementById("btnA").onclick = () => startApp("A");
   document.getElementById("btnB").onclick = () => startApp("B");
   document.getElementById("btnC").onclick = () => startApp("C");
 }
 
+// =====================
 function startApp(role) {
+
   myRole = role;
 
   document.getElementById("role-select").style.display = "none";
@@ -340,40 +212,52 @@ function startApp(role) {
 
   createLayout();
   createInputs();
-  setGuideLine();
+  applySharedColumns();
+  new ResizeObserver(applySharedColumns).observe(document.getElementById('workspace'));
   connectSocket();
 }
 
+// =====================
 function createLayout() {
+
   document.getElementById("app").innerHTML = `
     <div id="workspace">
-      <section
-        id="columns"
-        aria-label="担当者入力欄"
-      ></section>
 
-      <section id="log-panel">
+      <div id="columns"></div>
+
+      <div id="log-panel">
         <h3>ログ</h3>
-        <div
-          id="log"
-          class="fixed"
-          aria-label="送信ログ"
-        ></div>
-      </section>
 
-      <section id="search-panel">
+        <div id="log" class="fixed" style="
+          height:400px;
+          overflow-y:scroll;
+          border:1px solid var(--border);
+          padding:4px;
+          white-space:pre-wrap;
+          overflow-wrap:anywhere;
+        "></div>
+      </div>
+
+      <div id="search-panel">
         <h3>検索（選択中テキストをF4）</h3>
+
         <iframe
           id="searchFrame"
-          title="検索結果"
-          scrolling="yes"
-        ></iframe>
-      </section>
+          style="
+            width:600px;
+            height:400px;
+            border:1px solid var(--border);
+          ">
+        </iframe>
+      </div>
+
     </div>
   `;
 }
 
+// =====================
 function getOrder() {
+
   if (myRole === "A") return ["C","A","B"];
   if (myRole === "B") return ["A","B","C"];
   if (myRole === "C") return ["B","C","A"];
@@ -381,28 +265,44 @@ function getOrder() {
   return ["A","B","C"];
 }
 
+// =====================
 function createInputs() {
+
   const columns = document.getElementById("columns");
 
   columns.innerHTML = getOrder().map(k => `
     <div class="input-row">
+
       <div
         id="label-${k}"
-        class="role-label"
-      ></div>
-      <textarea
-        id="input-${k}"
-        class="fixed"
-        aria-label="${k}担当入力欄"
-      ></textarea>
+        style="
+          width:40px;
+          height:180px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:#555;
+          color:white;
+        ">
+      </div>
+
+      <div class="input-box"><textarea id="input-${k}" class="fixed" aria-label="${k}担当入力欄"></textarea><div id="guide-${k}" class="input-guide" aria-hidden="true"><span></span></div></div>
+
     </div>
   `).join("");
 
   ["A","B","C"].forEach(k => {
+
+    const field=document.getElementById('input-'+k);
+    field.addEventListener('compositionstart',()=>{if(k===myRole)operatorComposing=true;});
+    field.addEventListener('compositionend',()=>{if(k===myRole){operatorComposing=false;if(layoutPending)requestAnimationFrame(applySharedColumns);}});
+
     document.getElementById("input-" + k).oninput = e => {
+
       inputs[k] = e.target.value;
 
       if (socket && isConnected) {
+
         socket.emit("typing", {
           key:k,
           value:e.target.value
@@ -414,20 +314,22 @@ function createInputs() {
   updateUI();
 }
 
+// =====================
 function setGuideLine() {
+
   const span = document.createElement("span");
 
   span.style.font = "24px Consolas";
-  span.style.position = "absolute";
-  span.style.visibility = "hidden";
-  span.style.whiteSpace = "pre";
-  span.innerText = "あ".repeat(15.5);
+  span.innerText = "あ".repeat(sharedColumns);
 
   document.body.appendChild(span);
-  const w = span.getBoundingClientRect().width;
-  span.remove();
 
-  document.querySelectorAll("#columns textarea").forEach(el => {
+  const w = span.getBoundingClientRect().width;
+
+  document.body.removeChild(span);
+
+  document.querySelectorAll("textarea").forEach(el => {
+
     el.style.backgroundImage = `
       linear-gradient(
         to right,
@@ -440,10 +342,17 @@ function setGuideLine() {
   });
 }
 
+// =====================
 function connectSocket() {
-  socket = io("https://subtitle-server-czoz.onrender.com");
 
+  socket = SubtitleConnection.connect();
+  socket.on('settings', s => { sharedColumns=s.columns;applySharedColumns(); });
+  socket.on('roleError', message => { alert(message);location.reload(); });
+  socket.on('version',v=>{document.getElementById('version').textContent=v==='v24'?'v24':'v24 / サーバー '+v;});
+
+  // =====================
   socket.on("connect", () => {
+
     isConnected = true;
 
     socket.emit("register", {
@@ -451,7 +360,9 @@ function connectSocket() {
     });
   });
 
+  // =====================
   socket.on("disconnect", () => {
+
     isConnected = false;
 
     if (myRole) {
@@ -461,14 +372,18 @@ function connectSocket() {
     updateUI();
   });
 
+  // =====================
   socket.on("presence", presence => {
+
     connectedRoles = {
       A:!!presence.A,
       B:!!presence.B,
       C:!!presence.C
     };
 
+    // 未接続になった他担当の古い入力内容を消す
     ["A","B","C"].forEach(k => {
+
       if (k !== myRole && !connectedRoles[k]) {
         inputs[k] = "";
       }
@@ -477,24 +392,35 @@ function connectSocket() {
     updateUI();
   });
 
+  // =====================
   socket.on("typing", ({key,value}) => {
+
     inputs[key] = value;
+
     updateUI();
   });
 
+  // =====================
   socket.on("log", data => {
+
     log.push(data);
-    updateUI();
+    renderOperatorLog();
   });
 
+  // =====================
   socket.on("active", next => {
+
     active = next;
+
     updateUI();
   });
 }
 
+// =====================
 function updateUI() {
+
   ["A","B","C"].forEach(k => {
+
     const label = document.getElementById("label-" + k);
     const input = document.getElementById("input-" + k);
 
@@ -504,21 +430,34 @@ function updateUI() {
 
     const online = connectedRoles[k];
 
+    // =====================
+    // 担当ラベル
     label.textContent = k;
 
     if (!online) {
+
+      // 未接続
       label.style.background = "var(--label-offline-bg)";
       label.style.color = "var(--offline-text)";
       label.title = "未接続";
+
     } else if (active === k) {
+
+      // 現在の送信担当
       label.style.background = "#0a0";
       label.style.color = "white";
       label.title = "送信担当";
+
     } else {
+
+      // 接続中
       label.style.background = "var(--label-bg)";
       label.style.color = "var(--label-text)";
       label.title = "接続中";
     }
+
+    // =====================
+    // 入力欄
 
     input.readOnly = (
       myRole !== k ||
@@ -526,75 +465,34 @@ function updateUI() {
     );
 
     if (!online) {
+
       input.style.backgroundColor = "var(--offline-bg)";
       input.style.color = "var(--offline-text)";
       input.style.borderColor = "var(--offline-border)";
+
       input.placeholder = "未接続";
+
     } else {
+
       input.style.backgroundColor = "";
       input.style.color = "";
       input.style.borderColor = "";
+
       input.placeholder = "";
     }
 
+    // 自分以外の入力欄だけ同期
     if (k !== myRole) {
       input.value = inputs[k] || "";
     }
   });
 
-  const logEl = document.getElementById("log");
-
-  if (!logEl) {
-    return;
-  }
-
-  const nextText = log
-    .map(l =>
-      String(l.text || "")
-        .replace(/。(?=\r\n|\r|\n|$)/g, "｡")
-    )
-    .join("\n");
-
-  const currentText = logEl.textContent;
-
-  // typing通知ではログのDOMとスクロール位置を変更しない。
-  if (nextText !== currentText) {
-    const selection = window.getSelection();
-    let selectingLog = false;
-
-    if (selection && !selection.isCollapsed) {
-      for (let i = 0; i < selection.rangeCount; i++) {
-        if (selection.getRangeAt(i).intersectsNode(logEl)) {
-          selectingLog = true;
-          break;
-        }
-      }
-    }
-
-    const followBottom =
-      !selectingLog &&
-      logEl.scrollHeight -
-        logEl.clientHeight -
-        logEl.scrollTop <= 2;
-
-    // 既存のテキストノードを残して新着ログだけを追加する。
-    if (nextText.startsWith(currentText)) {
-      logEl.appendChild(
-        document.createTextNode(
-          nextText.slice(currentText.length)
-        )
-      );
-    } else {
-      logEl.textContent = nextText;
-    }
-
-    if (followBottom) {
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-  }
+  // 入力通知ではログに触れない。ログの更新はlogイベントと設定変更時だけ。
 }
 
+// =====================
 function send() {
+
   if (!isConnected) {
     return;
   }
@@ -614,7 +512,10 @@ function send() {
   const text = inputs[myRole] || "";
 
   inputs[myRole] = "";
-  document.getElementById("input-" + myRole).value = "";
+
+  document.getElementById(
+    "input-" + myRole
+  ).value = "";
 
   socket.emit("send", {
     key:myRole,
@@ -629,12 +530,23 @@ function send() {
   updateUI();
 }
 
+// =====================
 function bindGlobalKeys() {
-  document.addEventListener("keydown", handleKey);
+
+  document.addEventListener(
+    "keydown",
+    handleKey
+  );
 }
 
+// =====================
 function handleKey(e) {
+
+  // =====================
+  // F12送信
+
   if (e.key === "F12") {
+
     e.preventDefault();
 
     if (
@@ -645,23 +557,32 @@ function handleKey(e) {
     }
   }
 
+  // =====================
+  // F4検索
+
   if (e.key === "F4") {
+
     e.preventDefault();
 
-    const input = document.getElementById(
-      "input-" + myRole
-    );
+    const input =
+      document.getElementById(
+        "input-" + myRole
+      );
 
-    const frame = document.getElementById("searchFrame");
+    const frame =
+      document.getElementById(
+        "searchFrame"
+      );
 
     if (!input || !frame) {
       return;
     }
 
-    const text = input.value.substring(
-      input.selectionStart,
-      input.selectionEnd
-    );
+    const text =
+      input.value.substring(
+        input.selectionStart,
+        input.selectionEnd
+      );
 
     if (!text) {
       return;
@@ -672,6 +593,7 @@ function handleKey(e) {
       encodeURIComponent(text);
   }
 }
+
 </script>
 
 </body>
