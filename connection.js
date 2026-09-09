@@ -1,6 +1,6 @@
-// Vercelの全画面から同じRenderサーバーに接続する。
+// 通常はVercelの全画面からRenderサーバーに接続する。ローカル試験サーバー上だけは同じlocalhostへ接続する。
 window.SubtitleConnection = Object.freeze({
-  version: 'v24',
-  url: 'https://subtitle-server-czoz.onrender.com',
+  version: 'v27',
+  url: ['localhost','127.0.0.1'].includes(location.hostname) ? location.origin : 'https://subtitle-server-czoz.onrender.com',
   connect() { return io(this.url); }
 });

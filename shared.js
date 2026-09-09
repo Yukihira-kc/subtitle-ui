@@ -28,7 +28,12 @@
     }
     return result;
   }
-  window.CaptionLayout={font,width,measure,lines};
+  const captionFonts=Object.freeze({
+    'noto-sans-jp':'\"Noto Sans JP\", sans-serif',
+    'noto-serif-jp':'\"Noto Serif JP\", serif'
+  });
+  function captionFont(key){return captionFonts[key]||captionFonts['noto-sans-jp'];}
+  window.CaptionLayout={font,width,measure,lines,captionFont};
   window.CaptionLayout.wrapLine=function(text,columns){
     const out=[];let current='',used=0;
     for(const ch of [...String(text)]){

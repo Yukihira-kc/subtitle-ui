@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>字幕コラボ v24</title>
+<title>字幕コラボ v27</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js"></script>
 <script src="shared.js"></script>
@@ -61,7 +61,7 @@ textarea, button {
 </head>
 
 <body>
-<div id="toolbar"><small id="version">v24</small>
+<div id="toolbar"><small id="version">v27</small>
 <button id="theme-toggle" type="button" aria-pressed="false">白背景に切替</button>
 <span id="column-status">1行20文字</span><a href="reviewer.html" target="_blank">校閲画面</a></div>
 
@@ -348,7 +348,7 @@ function connectSocket() {
   socket = SubtitleConnection.connect();
   socket.on('settings', s => { sharedColumns=s.columns;applySharedColumns(); });
   socket.on('roleError', message => { alert(message);location.reload(); });
-  socket.on('version',v=>{document.getElementById('version').textContent=v==='v24'?'v24':'v24 / サーバー '+v;});
+  socket.on('version',v=>{document.getElementById('version').textContent=v==='v27'?'v27':'v27 / サーバー '+v;});
 
   // =====================
   socket.on("connect", () => {
