@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>字幕コラボ v27</title>
+<title>字幕コラボ v28</title>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js"></script>
 <script src="shared.js"></script>
@@ -61,9 +61,9 @@ textarea, button {
 </head>
 
 <body>
-<div id="toolbar"><small id="version">v27</small>
+<div id="toolbar"><small id="version">v28</small>
 <button id="theme-toggle" type="button" aria-pressed="false">白背景に切替</button>
-<span id="column-status">1行20文字</span><a href="reviewer.html" target="_blank">校閲画面</a></div>
+<span id="column-status">1行15文字</span><a href="reviewer.html" target="_blank">校閲画面</a></div>
 
 <div id="role-select">
   <h2>担当を選択</h2>
@@ -96,7 +96,7 @@ let connectedRoles = {
 };
 
 let log = [];
-let sharedColumns = 20;
+let sharedColumns = 15;
 let operatorComposing = false;
 let layoutPending = false;
 function applySharedColumns() {
@@ -348,7 +348,7 @@ function connectSocket() {
   socket = SubtitleConnection.connect();
   socket.on('settings', s => { sharedColumns=s.columns;applySharedColumns(); });
   socket.on('roleError', message => { alert(message);location.reload(); });
-  socket.on('version',v=>{document.getElementById('version').textContent=v==='v27'?'v27':'v27 / サーバー '+v;});
+  socket.on('version',v=>{document.getElementById('version').textContent=v==='v28'?'v28':'v28 / サーバー '+v;});
 
   // =====================
   socket.on("connect", () => {
