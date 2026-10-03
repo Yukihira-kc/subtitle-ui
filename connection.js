@@ -54,5 +54,5 @@
       }}
     };check();
   }
-  window.SubtitleConnection=Object.freeze({version:'v29.2',url,roomId,storageKey:key=>prefix+key,connect,api,token,remember});
+  window.SubtitleConnection=Object.freeze({version:'v29.3',url,roomId,storageKey:key=>prefix+key,connect,api,token,remember});
 })();
