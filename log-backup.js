@@ -43,15 +43,14 @@ async function permissionStatus(){if(!navigator.storage?.persisted)return false;
 async function permission(){if(!navigator.storage?.persist)throw Error('永続保存の許可を利用できません');return navigator.storage.persist();}
 function create({scope,roomId}){
  let active=null,roomName=roomId==='practice'?'練習用':roomId,persistent=false,requestingPermission=false;
- const records=new Map(),summaries=new Map();
- function renderArchives(){const select=$('log-archive'),old=select.value;select.replaceChildren(new Option('今回のログ',''));[...summaries.values()].filter(r=>r.key!==active?.key).sort((a,b)=>b.startedAt-a.startedAt).forEach(r=>select.add(new Option(new Date(r.startedAt).toLocaleString('ja-JP')+'（'+r.count+'件）',r.key)));if([...select.options].some(o=>o.value===old))select.value=old;}
+ const records=new Map();
  function render(){
   $('log-backup-state').textContent=active?.error?'自動保存：保存失敗':active?.savedAt?'自動保存：'+new Date(active.savedAt).toLocaleTimeString('ja-JP')+' 保存済み':'自動保存：'+(active?'保存待ち':'接続待ち');
   $('log-save-error').textContent=active?.error?'端末内に保存できませんでした。'+active.error+' 必要に応じてTXTを書き出してください。':'';
   $('log-permission-state').textContent=persistent?'ログの自動削除を防ぐ設定：有効':'ログの自動削除を防ぐ設定：未設定。ログ欄の「保存設定を許可」から設定してください';
   $('log-permission-prompt').hidden=persistent;
   $('log-permission').disabled=persistent||requestingPermission;
-  $('log-export').disabled=!active&&!summaries.size;
+  $('log-export').disabled=!active;
  }
  function metadata(r){return {key:r.key,scope,roomId,roomName:r.roomName,session:r.session,filename:r.filename,startedAt:r.startedAt,updatedAt:r.updatedAt,count:r.items.size};}
  async function load(r){
@@ -82,23 +81,23 @@ function create({scope,roomId}){
      if(r.deletedAt&&!kept.length)tx.objectStore('sessions').delete(r.key);else tx.objectStore('sessions').put(info);
     };
    });
-   r.savedRevision=revision;r.savedAt=savedAt;r.error='';if(r.deletedAt&&!info.count)summaries.delete(r.key);else summaries.set(r.key,info);renderArchives();render();
+   r.savedRevision=revision;r.savedAt=savedAt;r.error='';render();
   }})().catch(e=>{r.error=e.message;render();}).finally(()=>{r.saving=null;});return r.saving;
  }
  function start(session){if(!session||active?.session===session)return;if(active)persist(active);const key=scope+'|'+session;
   if(!records.has(key)){const now=Date.now(),safe=v=>String(v).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);records.set(key,{key,session,roomName,startedAt:now,updatedAt:now,filename:'subtitle-'+safe(roomId)+'-'+now+'-'+safe(session)+'.txt',items:new Map(),revision:0,savedRevision:-1,loaded:false});}
-  active=records.get(key);persist(active);renderArchives();render();
+  active=records.get(key);persist(active);render();
  }
  function add(item){if(!active||!valid(item)||active.items.has(item.id))return;active.items.set(item.id,{id:item.id,lines:[...item.lines],at:item.at,receivedAt:Date.now()});active.updatedAt=Date.now();active.revision++;persist(active);}
  function setRoomName(name){if(typeof name!=='string'||!name.trim())return;roomName=name;if(active&&active.roomName!==name){active.roomName=name;active.revision++;persist(active);}}
  $('log-help-open').onclick=()=>$('log-help-dialog').showModal();
  $('log-permission').onclick=async()=>{requestingPermission=true;render();$('log-permission-feedback').textContent='許可を確認中…';try{persistent=await permission();$('log-permission-feedback').textContent=persistent?'':'設定は許可されませんでした。ログの自動保存は継続します。';}catch(e){$('log-permission-feedback').textContent=e.message;}finally{requestingPermission=false;render();}};
- $('log-export').onclick=async()=>{try{const key=$('log-archive').value;if(key){const r=await read('records',key);if(!r||r.scope!==scope)throw Error('ログを読み出せません');download(r);}else if(active){try{await load(active);}catch(_){}download(active);}}catch(e){$('log-save-error').textContent='TXTを書き出せませんでした。'+e.message;}};
+ $('log-export').onclick=async()=>{if(!active)return;try{try{await load(active);}catch(_){}download(active);}catch(e){$('log-save-error').textContent='TXTを書き出せませんでした。'+e.message;}};
  const tick=()=>{if(active)persist(active);};setInterval(tick,INTERVAL);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')tick();});window.addEventListener('pagehide',tick);
  window.addEventListener('beforeunload',e=>{if(active?.items.size&&active.savedRevision!==active.revision){tick();e.preventDefault();e.returnValue='';}});
- $('log-save-help').textContent='表示した字幕は、その都度この校閲端末にのみ保存します。他のPCでは見られません。\n\n保存に失敗した場合は、5分ごとに再試行します。\n\n「TXTを生成」を押すと、選択したログをTXTファイルとしてダウンロードできます。';
- transaction(['sessions'],false,(tx,done)=>{const r=tx.objectStore('sessions').index('scope').getAll(scope);r.onsuccess=()=>done(r.result);}).then(rows=>{for(const r of rows)if(!summaries.has(r.key))summaries.set(r.key,r);renderArchives();render();}).catch(()=>{});
+ $('log-save-help').textContent='表示した字幕は、その都度この校閲端末にのみ保存します。他のPCでは見られません。\n\n保存に失敗した場合は、5分ごとに再試行します。\n\n「TXTを生成」を押すと、現在のログをTXTファイルとしてダウンロードできます。';
+
  permissionStatus().then(v=>{persistent=v;render();}).catch(()=>{});render();
  return Object.freeze({start,add,setRoomName});
 }

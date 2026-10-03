@@ -45,7 +45,7 @@ function renderQueue(items){$('queue').textContent='';items.forEach(item=>{const
 let currentCaption={id:0,lines:[]};
 function display(item){currentCaption=item;CaptionView.render($('capture'),item,settings);CaptionView.confirm(socket,item);}
 document.addEventListener('visibilitychange',()=>CaptionView.confirm(socket,currentCaption));
-socket.on('version',v=>{$('version').textContent=v==='v29'||v==='v29.7'?'v29.7':'v29.7 / サーバー '+v;});
+socket.on('version',v=>{$('version').textContent=v==='v29'||v==='v29.8'?'v29.8':'v29.8 / サーバー '+v;});
 function prefixRange(end){const walker=document.createTreeWalker(edit,NodeFilter.SHOW_TEXT),range=document.createRange();range.setStart(edit,0);let n,offset=0;while(n=walker.nextNode()){if(offset+n.length>=end){range.setEnd(n,end-offset);return range;}offset+=n.length;}range.selectNodeContents(edit);return range;}
 function editorText(){return String(edit.textContent||'').replace(/\r\n?/g,'\n');}
 function manualRows(text,count){const source=String(text),parts=source.split('\n'),rows=[];let end=0;for(let i=0;i<Math.min(count,parts.length);i++){const value=parts[i];if(!value&&i===0)break;end+=value.length+(i<parts.length-1?1:0);rows.push({text:value,end});}return rows;}
@@ -82,3 +82,11 @@ $('theme').onclick=()=>{document.body.classList.toggle('light');$('theme').textC
 applySettings(settings);updateThroughMode();monitor();buttons();
 
 new ResizeObserver(()=>CaptionView.render($('capture'),currentCaption,settings)).observe($('capture').parentElement);
+
+// Select only the caption log when its own region has keyboard focus.
+$('sent').addEventListener('keydown',event=>{
+  if(!event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||event.isComposing||event.repeat||!(event.code==='KeyA'||event.key?.toLowerCase()==='a'))return;
+  event.preventDefault();event.stopPropagation();
+  const selection=window.getSelection();if(!selection)return;
+  const range=document.createRange();range.selectNodeContents($('sent'));selection.removeAllRanges();selection.addRange(range);
+});
