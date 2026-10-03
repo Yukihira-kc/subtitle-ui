@@ -44,7 +44,7 @@ function renderQueue(items){$('queue').textContent='';items.forEach(item=>{const
 let currentCaption={id:0,lines:[]};
 function display(item){currentCaption=item;CaptionView.render($('capture'),item,settings);CaptionView.confirm(socket,item);}
 document.addEventListener('visibilitychange',()=>CaptionView.confirm(socket,currentCaption));
-socket.on('version',v=>{$('version').textContent=v==='v29'||v==='v29.1'?'v29.1':'v29.1 / サーバー '+v;});
+socket.on('version',v=>{$('version').textContent=v==='v29'||v==='v29.2'?'v29.2':'v29.2 / サーバー '+v;});
 function prefixRange(end){const walker=document.createTreeWalker(edit,NodeFilter.SHOW_TEXT),range=document.createRange();range.setStart(edit,0);let n,offset=0;while(n=walker.nextNode()){if(offset+n.length>=end){range.setEnd(n,end-offset);return range;}offset+=n.length;}range.selectNodeContents(edit);return range;}
 function editorText(){return String(edit.textContent||'').replace(/\r\n?/g,'\n');}
 function manualRows(text,count){const source=String(text),parts=source.split('\n'),rows=[];let end=0;for(let i=0;i<Math.min(count,parts.length);i++){const value=parts[i];if(!value&&i===0)break;end+=value.length+(i<parts.length-1?1:0);rows.push({text:value,end});}return rows;}
