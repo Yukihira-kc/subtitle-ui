@@ -3,7 +3,7 @@
   'use strict';
   const url=['localhost','127.0.0.1'].includes(location.hostname)?location.origin:'https://subtitle-server-czoz.onrender.com';
   const params=new URLSearchParams(location.search),roomId=params.get('room')||'';
-  const isLobby=/\/rooms\.html$/.test(location.pathname);
+  const isLobby=/\/(rooms|logs)\.html$/.test(location.pathname);
   const pages=['index.html','reviewer.html','output.html'];
   const page=location.pathname.split('/').pop()||'index.html';
   const prefix='subtitle-v29:'+url+':'+roomId+':';
@@ -54,5 +54,5 @@
       }}
     };check();
   }
-  window.SubtitleConnection=Object.freeze({version:'v29.3',url,roomId,storageKey:key=>prefix+key,connect,api,token,remember});
+  window.SubtitleConnection=Object.freeze({version:'v29.5',url,roomId,storageKey:key=>prefix+key,connect,api,token,remember});
 })();

@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>字幕コラボ v29.3</title>
+<title>字幕コラボ v29.5</title>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.3"></script>
-<script src="shared.js?v=29.3"></script>
-<script src="pagination.js?v=29.3"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.5"></script>
+<script src="shared.js?v=29.5"></script>
+<script src="pagination.js?v=29.5"></script>
 <link rel="stylesheet" href="operator.css">
 
 <style>
@@ -61,7 +61,7 @@ textarea, button {
 </head>
 
 <body>
-<div id="toolbar"><small id="version">v29.3</small>
+<div id="toolbar"><small id="version">v29.5</small>
 <button id="theme-toggle" type="button" aria-pressed="false">白背景に切替</button>
 <span id="column-status">1行15文字</span><a href="reviewer.html" target="_blank">校閲画面</a></div>
 
@@ -348,7 +348,7 @@ function connectSocket() {
   socket = SubtitleConnection.connect();
   socket.on('settings', s => { sharedColumns=s.columns;applySharedColumns(); });
   socket.on('roleError', message => { alert(message);location.reload(); });
-  socket.on('version',v=>{document.getElementById('version').textContent=v==='v29'||v==='v29.3'?'v29.3':'v29.3 / サーバー '+v;});
+  socket.on('version',v=>{document.getElementById('version').textContent=v==='v29'||v==='v29.5'?'v29.5':'v29.5 / サーバー '+v;});
 
   // =====================
   socket.on("connect", () => {
