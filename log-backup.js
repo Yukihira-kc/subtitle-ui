@@ -32,9 +32,9 @@ function create({scope,roomId}){
  const records=new Map(),summaries=new Map();
  function renderArchives(){const select=$('log-archive'),old=select.value;select.replaceChildren(new Option('今回のログ',''));[...summaries.values()].filter(r=>r.key!==active?.key).sort((a,b)=>b.startedAt-a.startedAt).forEach(r=>select.add(new Option(new Date(r.startedAt).toLocaleString('ja-JP')+'（'+r.count+'件）',r.key)));if([...select.options].some(o=>o.value===old))select.value=old;}
  function render(){
-  $('log-backup-state').textContent=active?.error?'端末内保存：保存失敗':active?.savedAt?'端末内保存：'+new Date(active.savedAt).toLocaleTimeString('ja-JP')+' 保存済み':'端末内保存：'+(active?'保存待ち':'接続待ち');
+  $('log-backup-state').textContent=active?.error?'自動保存：保存失敗':active?.savedAt?'自動保存：'+new Date(active.savedAt).toLocaleTimeString('ja-JP')+' 保存済み':'自動保存：'+(active?'保存待ち':'接続待ち');
   $('log-save-error').textContent=active?.error?'端末内に保存できませんでした。'+active.error+' 必要に応じてTXTを書き出してください。':'';
-  $('log-permission-state').textContent=persistent?'永続保存：許可済み（サイトデータを手動削除するとログも消えます）':'永続保存：未許可 — 自動削除を防ぐため許可してください';
+  $('log-permission-state').textContent=persistent?'ログの自動削除を防ぐ設定：有効':'ログの自動削除を防ぐ設定：未設定。下のボタンから許可してください';
   $('log-permission').disabled=persistent;
   $('log-export').disabled=!active&&!summaries.size;
  }
@@ -63,12 +63,12 @@ function create({scope,roomId}){
  }
  function add(item){if(!active||!valid(item)||active.items.has(item.id))return;active.items.set(item.id,{id:item.id,lines:[...item.lines],at:item.at});active.updatedAt=Date.now();active.revision++;persist(active);}
  function setRoomName(name){if(typeof name!=='string'||!name.trim())return;roomName=name;if(active&&active.roomName!==name){active.roomName=name;active.revision++;persist(active);}}
- $('log-permission').onclick=async()=>{try{persistent=await permission();render();if(!persistent)$('log-permission-state').textContent='永続保存は許可されませんでした。端末内保存は継続します。';}catch(e){$('log-permission-state').textContent=e.message;}};
+ $('log-permission').onclick=async()=>{try{persistent=await permission();render();if(!persistent)$('log-permission-state').textContent='設定は許可されませんでした。ログの自動保存は継続します。';}catch(e){$('log-permission-state').textContent=e.message;}};
  $('log-export').onclick=async()=>{try{const key=$('log-archive').value;if(key){const r=await read('records',key);if(!r||r.scope!==scope)throw Error('ログを読み出せません');download(r);}else if(active){try{await load(active);}catch(_){}download(active);}}catch(e){$('log-save-error').textContent='TXTを書き出せませんでした。'+e.message;}};
  const tick=()=>{if(active)persist(active);};setInterval(tick,INTERVAL);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')tick();});window.addEventListener('pagehide',tick);
  window.addEventListener('beforeunload',e=>{if(active?.items.size&&active.savedRevision!==active.revision){tick();e.preventDefault();e.returnValue='';}});
- $('log-save-help').textContent='表示済み字幕を受信時に保存し、5分ごとに未保存分を再試行します。同じPC・同じブラウザで閲覧できます。プライベートブラウジングは使用しないでください。';
+ $('log-save-help').textContent='表示した字幕は、その都度この校閲端末にのみ保存します。他のPCでは見られません。\n\n保存に失敗した場合は、5分ごとに再試行します。\n\n「TXTを生成」を押すと、選択したログをTXTファイルとしてダウンロードできます。';
  transaction(['sessions'],false,(tx,done)=>{const r=tx.objectStore('sessions').index('scope').getAll(scope);r.onsuccess=()=>done(r.result);}).then(rows=>{for(const r of rows)if(!summaries.has(r.key))summaries.set(r.key,r);renderArchives();render();}).catch(()=>{});
  permissionStatus().then(v=>{persistent=v;render();}).catch(()=>{});render();
  return Object.freeze({start,add,setRoomName});
