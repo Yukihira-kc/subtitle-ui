@@ -5,12 +5,17 @@
   let selected=null,selection=0,busy=false;
   function resetFields(id){$(id).querySelectorAll('input').forEach(input=>{input.value='';});}
   function clearEntryFields(){for(const id of ['create-form','join-form','password-form'])resetFields(id);}
-  function takePassword(id){const input=$(id),value=input.value;input.value='';return value;}
+  function normalizePassword(value){return value.replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xfee0));}
+  function normalizeField(input){input.value=normalizePassword(input.value);}
+  for(const id of ['new-password','join-password','change-password']){
+    const input=$(id);input.addEventListener('input',e=>{if(!e.isComposing)normalizeField(input);});input.addEventListener('compositionend',()=>normalizeField(input));
+  }
+  function takePassword(id){const input=$(id),value=normalizePassword(input.value);input.value='';return value;}
   // These are room access controls, not a website account login. Avoid native
   // login-form submission and clear secrets before any request or navigation.
   function bindAction(id,handler){
     const group=$(id);
-    const run=()=>{if(busy)return;for(const input of group.querySelectorAll('input'))if(!input.reportValidity())return;handler();};
+    const run=()=>{if(busy)return;for(const input of group.querySelectorAll('input')){if(input.type==='password')normalizeField(input);if(!input.reportValidity())return;}handler();};
     group.querySelector('[data-action]').onclick=run;
     group.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&e.keyCode!==229&&e.target.matches('input')){e.preventDefault();run();}});
   }
@@ -47,6 +52,7 @@
       catch(e){if(ticket!==selection)return;if(e.status!==401&&e.status!==403)throw e;C.remember(id,'');}
     }
     $('join-title').textContent=room.name;$('join-purpose').textContent=purpose==='manage'?'ルームを管理するにはパスワードで認証してください。':'認証後、A・B・Cの担当選択画面へ進みます。';
+    $('join-password').maxLength=room.pin4?4:128;if(room.pin4)$('join-password').setAttribute('pattern','[0-9]{4}');else $('join-password').removeAttribute('pattern');
     $('join-status').textContent='';$('join-password').value='';$('join-dialog').showModal();$('join-password').focus();
     $('status').textContent='パスワードを入力してください。';
   }
