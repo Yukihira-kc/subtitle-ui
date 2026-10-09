@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>字幕連係 v29.8</title>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-operator-fix"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
 <link rel="stylesheet" href="operator.css">
@@ -97,8 +97,14 @@ let connectedRoles = {
 
 let log = [];
 let sharedColumns = 15;
+const operatorId=crypto.randomUUID();
 let operatorComposing = false;
+let logFollowing=true,logScrollFrame=0;
 let layoutPending = false;
+function queueLogScroll(){
+  if(logScrollFrame)cancelAnimationFrame(logScrollFrame);
+  logScrollFrame=requestAnimationFrame(()=>{logScrollFrame=0;const el=document.getElementById('log');if(el&&logFollowing&&!logSelectionActive())el.scrollTop=el.scrollHeight;});
+}
 function applySharedColumns() {
   document.getElementById('column-status').textContent='1行'+sharedColumns+'文字';
   if(operatorComposing){layoutPending=true;return;}
@@ -143,7 +149,7 @@ function renderOperatorLog(){
   // 選択中の設定変更はコピーが終わってから反映する。
   const selected=logSelectionActive();
   if(renderedLogColumns!==sharedColumns&&selected)return;
-  const following=!selected&&el.scrollHeight-el.clientHeight-el.scrollTop<=2;
+  const following=!selected&&logFollowing;
   const top=el.scrollTop;
   if(renderedLogColumns!==sharedColumns){el.replaceChildren();renderedLogCount=0;renderedLogColumns=sharedColumns;}
   while(renderedLogCount<log.length){
@@ -160,8 +166,9 @@ function renderOperatorLog(){
     el.appendChild(entry);
   }
   el.scrollTop=following?el.scrollHeight:top;
+  if(following)queueLogScroll();
 }
-document.addEventListener('selectionchange',()=>{if(!logSelectionActive()&&renderedLogColumns!==sharedColumns)renderOperatorLog();});
+document.addEventListener('selectionchange',()=>{if(!logSelectionActive()){if(renderedLogColumns!==sharedColumns)renderOperatorLog();if(logFollowing)queueLogScroll();}});
 
 // =====================
 window.addEventListener("DOMContentLoaded", init);
@@ -211,6 +218,13 @@ function startApp(role) {
   document.getElementById("app").style.display = "block";
 
   createLayout();
+  const logEl=document.getElementById('log');let userScrollUntil=0;
+  for(const name of ['wheel','touchstart','touchmove','pointerdown','pointermove','keydown'])logEl.addEventListener(name,event=>{
+    if(event.type==='pointermove'&&!event.buttons)return;
+    if(event.type==='keydown'&&!['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key))return;
+    userScrollUntil=Date.now()+1000;
+  },{passive:true});
+  logEl.addEventListener('scroll',()=>{const bottom=logEl.scrollHeight-logEl.clientHeight-logEl.scrollTop<=3;if(bottom)logFollowing=true;else if(Date.now()<=userScrollUntil)logFollowing=false;});
   createInputs();
   applySharedColumns();
   new ResizeObserver(applySharedColumns).observe(document.getElementById('workspace'));
@@ -348,16 +362,22 @@ function connectSocket() {
   socket = SubtitleConnection.connect();
   socket.on('settings', s => { sharedColumns=s.columns;applySharedColumns(); });
   socket.on('roleError', message => { alert(message);location.reload(); });
+  socket.on('operatorSnapshot', data=>{
+    log=data.raw;renderedLogCount=0;renderedLogColumns=0;renderOperatorLog();
+  });
+  function registerOperator(){socket.emit('register',{key:myRole,operatorId},result=>{
+    if(!result?.ok)return;
+    isConnected=true;connectedRoles[myRole]=true;
+    const field=document.getElementById('input-'+myRole);inputs[myRole]=field.value;
+    socket.emit('typing',{key:myRole,value:field.value});updateUI();
+  });}
   socket.on('version',v=>{document.getElementById('version').textContent=v==='v29'||v==='v29.8'?'v29.8':'v29.8 / サーバー '+v;});
 
   // =====================
   socket.on("connect", () => {
 
-    isConnected = true;
-
-    socket.emit("register", {
-      key:myRole
-    });
+    isConnected = false;
+    registerOperator();
   });
 
   // =====================
@@ -395,7 +415,7 @@ function connectSocket() {
   // =====================
   socket.on("typing", ({key,value}) => {
 
-    inputs[key] = value;
+    if(key!==myRole)inputs[key] = value;
 
     updateUI();
   });
@@ -403,6 +423,7 @@ function connectSocket() {
   // =====================
   socket.on("log", data => {
 
+    if(log.some(item=>item.id===data.id))return;
     log.push(data);
     renderOperatorLog();
   });
@@ -432,7 +453,7 @@ function updateUI() {
 
     // =====================
     // 担当ラベル
-    label.textContent = k;
+    label.textContent = k===myRole&&!isConnected?k+"（再接続中）":k;
 
     if (!online) {
 
@@ -460,8 +481,7 @@ function updateUI() {
     // 入力欄
 
     input.readOnly = (
-      myRole !== k ||
-      !online
+      myRole !== k
     );
 
     if (!online) {
@@ -540,7 +560,18 @@ function bindGlobalKeys() {
 }
 
 // =====================
+function onFirstVisualLine(field){
+  const caret=field.selectionDirection==='backward'?field.selectionStart:field.selectionEnd;
+  if(field.value.slice(0,caret).includes('\n'))return false;
+  const style=getComputedStyle(field),mirror=document.createElement('div');
+  for(const name of ['fontFamily','fontSize','fontWeight','fontStyle','letterSpacing','lineHeight','wordBreak','overflowWrap','lineBreak','tabSize'])mirror.style[name]=style[name];
+  mirror.style.cssText+=';position:fixed;visibility:hidden;pointer-events:none;white-space:pre-wrap;overflow-wrap:break-word;padding:0;border:0;box-sizing:content-box;width:'+Math.max(1,field.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight))+'px;';
+  mirror.appendChild(document.createTextNode(field.value.slice(0,caret)));
+  const marker=document.createElement('span');marker.textContent=field.value.slice(caret,caret+1)||'\u200b';mirror.appendChild(marker);document.body.appendChild(mirror);
+  const first=marker.getBoundingClientRect().top-mirror.getBoundingClientRect().top<parseFloat(style.lineHeight)/2;mirror.remove();return first;
+}
 function handleKey(e) {
+  if(e.key==='ArrowUp'&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.isComposing&&!operatorComposing&&e.keyCode!==229&&e.target.id==='input-'+myRole&&onFirstVisualLine(e.target)){e.preventDefault();return;}
 
   // =====================
   // F12送信

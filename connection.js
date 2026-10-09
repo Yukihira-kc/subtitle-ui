@@ -36,7 +36,7 @@
   }
   function connect(){
     let connectionToken='';
-    const socket=io(url,{autoConnect:false,auth:cb=>{connectionToken=token();cb({roomId,token:connectionToken});}});
+    const socket=io(url,{autoConnect:false,reconnection:true,reconnectionDelay:500,reconnectionDelayMax:3000,timeout:10000,auth:cb=>{connectionToken=token();cb({roomId,token:connectionToken});}});
     socket.on('roomInfo',showRoom);
     function reauthenticate(){try{if(token()===connectionToken)remember(roomId,'');}catch(_){}location.replace(lobby('auth'));}
     socket.on('roomRevoked',reauthenticate);
