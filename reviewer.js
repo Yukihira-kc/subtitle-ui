@@ -21,7 +21,7 @@ try{const saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');if(saved)
 function save(){try{sessionStorage.setItem(storageKey,JSON.stringify({draft:edit.textContent,session,seen:[...seen],pending:!!pending||blocked}));}catch(_){}}
 function status(text){$('status').textContent=text;}
 function buttons(){['send-one','send-two','out'].forEach(id=>$(id).disabled=!ready||!!pending||blocked||composing);}
-function applySettings(s){if(composing||pending){deferredSettings=s;return;}settings={...s,textColor:s.textColor||'#ffffff',outline:s.outline!==false,fontWeight:s.fontWeight==='bold'?'bold':'normal'};$('columns').value=settings.columns;$('lineCount').value=settings.lineCount;$('mode').value=settings.mode;$('keyColor').value=settings.keyColor;$('keyColorCode').value=String(settings.keyColor).toUpperCase();$('captionFont').value=settings.captionFont||'noto-sans-jp';$('textColor').value=settings.textColor;$('outline').value=settings.outline?'on':'off';$('fontWeight').value=settings.fontWeight;edit.style.width='auto';edit.style.fontFamily=CaptionLayout.font;const parent=$('edit-scroll').getBoundingClientRect(),parentStyle=getComputedStyle($('edit-scroll')),rect=edit.getBoundingClientRect(),style=getComputedStyle(edit),edge=(rect.left-parent.left)-parseFloat(parentStyle.borderLeftWidth||0)-parseFloat(style.borderLeftWidth||0)+parseFloat(style.paddingLeft);const guide=$('edit-guide');guide.style.left=edge+'px';guide.style.fontFamily=style.fontFamily;guide.style.fontSize=style.fontSize;guide.style.fontWeight=style.fontWeight;guide.innerHTML='';const marker=document.createElement('span');marker.textContent='あ'.repeat(settings.columns);guide.appendChild(marker);edit.style.backgroundImage='none';$('fontSize').value=settings.fontSize;CaptionView.render($('capture'),currentCaption,settings);}
+function applySettings(s){if(composing||pending){deferredSettings=s;return;}settings={...s,textColor:s.textColor||'#ffffff',outline:s.outline!==false,fontWeight:s.fontWeight==='bold'?'bold':'normal'};$('columns').value=settings.columns;$('lineCount').value=settings.lineCount;$('mode').value=settings.mode;$('keyColor').value=settings.keyColor;$('keyColorCode').value=String(settings.keyColor).toUpperCase();$('captionFont').value=settings.captionFont||'noto-sans-jp';$('textColor').value=settings.textColor;$('outline').value=settings.outline?'on':'off';$('fontWeight').value=settings.fontWeight;edit.style.width='auto';edit.style.fontFamily=CaptionLayout.font;const parent=$('edit-scroll').getBoundingClientRect(),parentStyle=getComputedStyle($('edit-scroll')),rect=edit.getBoundingClientRect(),style=getComputedStyle(edit),edge=(rect.left-parent.left)-parseFloat(parentStyle.borderLeftWidth||0)-parseFloat(style.borderLeftWidth||0)+parseFloat(style.paddingLeft);const guide=$('edit-guide');guide.style.left=edge+'px';guide.style.fontFamily=style.fontFamily;guide.style.fontSize=style.fontSize;guide.style.fontWeight=style.fontWeight;guide.innerHTML='';const marker=document.createElement('span');marker.textContent='あ'.repeat(settings.columns);guide.appendChild(marker);edit.style.backgroundImage='none';fitEditorTerminalPeriod();$('fontSize').value=settings.fontSize;CaptionView.render($('capture'),currentCaption,settings);}
 for(let i=10;i<=40;i++){const o=document.createElement('option');o.value=i;o.textContent=i;$('columns').appendChild(o);}
 function emitSettings(){if(ready&&!pending&&!composing)socket.emit('setSettings',{columns:Number($('columns').value),mode:$('mode').value,keyColor:$('keyColor').value,fontSize:Number($('fontSize').value),lineCount:Number($('lineCount').value),captionFont:$('captionFont').value,textColor:$('textColor').value,outline:$('outline').value==='on',fontWeight:$('fontWeight').value});}
 ['columns','mode','keyColor','fontSize','lineCount','captionFont','textColor','outline','fontWeight'].forEach(id=>$(id).onchange=()=>{if(id==='columns')saveColumns(Number($('columns').value));if(id==='keyColor')$('keyColorCode').value=$('keyColor').value.toUpperCase();emitSettings();});
@@ -90,3 +90,19 @@ $('sent').addEventListener('keydown',event=>{
   const selection=window.getSelection();if(!selection)return;
   const range=document.createRange();range.selectNodeContents($('sent'));selection.removeAllRanges();selection.addRange(range);
 });
+
+/* Reserve room for a terminal full stop without rewriting editable text or IME nodes. */
+function fitEditorTerminalPeriod(){
+  const style=getComputedStyle(edit);
+  let required=0;
+  for(const line of editorText().split('\n')){
+    const chars=CaptionPagination.segments(line);
+    if(chars.length===settings.columns+1&&chars[chars.length-1]==='。'&&!/[。、｡､]/.test(chars[chars.length-2])){
+      required=Math.max(required,CaptionLayout.measure(line,edit));
+    }
+  }
+  const padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
+  edit.style.minWidth=required?Math.ceil(required+padding+2)+'px':'';
+}
+new MutationObserver(fitEditorTerminalPeriod).observe(edit,{childList:true,characterData:true,subtree:true});
+document.fonts.ready.then(fitEditorTerminalPeriod);
