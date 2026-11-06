@@ -30,7 +30,7 @@
       if(page==='output.html'||document.getElementById('room-nav'))return;
       const nav=document.createElement('div');nav.id='room-nav';nav.style.cssText='display:flex;gap:14px;align-items:center;flex-wrap:wrap;font:14px Meiryo,sans-serif;padding:5px 0;flex-shrink:0';
       const name=document.createElement('strong');name.textContent=info.name;
-      const link=document.createElement('a');const managementUrl=new URL('rooms.html',location.href);link.href=managementUrl.href;link.textContent='ルーム選択・管理';link.style.color='#72b7ff';nav.append(name,link);document.body.prepend(nav);
+      const link=document.createElement('a');const managementUrl=new URL('rooms.html',location.href);link.href=managementUrl.href;link.textContent='ルーム選択・管理';link.style.color='#72b7ff';nav.append(name,link);(page==='index.html'&&document.getElementById('toolbar')||document.body).prepend(nav);
     };
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',reveal,{once:true});else reveal();
   }

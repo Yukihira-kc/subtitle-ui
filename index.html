@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>字幕連係 v29.8</title>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-operator-fix"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-room-toolbar-4"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=operator-full-height-3">
+<link rel="stylesheet" href="operator.css?v=fixed-panels-4">
 
 <style>
 body {
@@ -120,19 +120,17 @@ function applySharedColumns() {
     const available=el.clientWidth-padding;
     // 設定文字数＋5文字分を確保できる文字サイズ。値・選択・IMEには触れない。
     const stack=document.getElementById('columns'),stackStyle=getComputedStyle(stack);
-    const compact=window.matchMedia('(max-width:700px)').matches;
     const rowSpace=(stack.clientHeight-2*parseFloat(stackStyle.rowGap))/3;
     const zoom=stack.parentElement.classList.contains('search-hidden');
     const maxSize=zoom?28:24;
-    let size=compact?maxSize:Math.min(maxSize,Math.max(1,(rowSpace-11)/(6*1.42)));
+    let size=Math.min(maxSize,Math.max(1,(rowSpace-11)/(6*1.42)));
     for(let attempt=0;attempt<12;attempt++){
       el.style.fontSize=size+'px';
       const actual=CaptionLayout.measure('あ'.repeat(sharedColumns+5),el);
       if(actual<=available-2||size<=1)break;
       size=Math.max(1,Math.min(size-.5,size*(available-2)/actual));
     }
-    el.style.fontSize=size+'px';el.style.lineHeight='1.42';
-    el.closest('.input-row').style.height=Math.ceil(size*1.42*6+10)+'px';
+    el.style.fontSize=size+'px';el.style.lineHeight=Math.max(1,(el.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom))/6)+'px';
     const box=el.parentElement;
     box.style.maxWidth=zoom?Math.ceil(CaptionLayout.measure('あ'.repeat(sharedColumns+5),el)+(el.offsetWidth-el.clientWidth)+padding+2)+'px':'';
     if(zoom){const row=el.closest('.input-row');closedWidth=Math.max(closedWidth,Math.min(box.offsetWidth,parseFloat(box.style.maxWidth))+row.firstElementChild.offsetWidth+parseFloat(getComputedStyle(row).columnGap));}
