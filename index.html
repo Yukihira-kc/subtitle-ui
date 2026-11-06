@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-room-toolbar-4"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=operator-plus-three-8">
+<link rel="stylesheet" href="operator.css?v=operator-six-visible-9">
 
 <style>
 body {
@@ -114,6 +114,9 @@ function applySharedColumns() {
   document.querySelectorAll('#columns textarea').forEach(el=>{
     el.style.fontFamily=CaptionLayout.font;
     const style=getComputedStyle(el);
+    const lineHeight=(el.getBoundingClientRect().height-['borderTopWidth','borderBottomWidth','paddingTop','paddingBottom'].reduce((sum,key)=>sum+parseFloat(style[key]),0))/6;
+    el.style.lineHeight=lineHeight+'px';
+    el.style.fontSize=(24*lineHeight/34)+'px';
     const row=el.closest('.input-row');
     const textWidth=CaptionLayout.measure('あ'.repeat(Math.min(sharedColumns,22)+3),el);
     const fieldEdges=el.offsetWidth-el.clientWidth+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
@@ -222,6 +225,13 @@ function startApp(role) {
   logEl.addEventListener('scroll',()=>{const bottom=logEl.scrollHeight-logEl.clientHeight-logEl.scrollTop<=3;if(bottom)logFollowing=true;else if(Date.now()<=userScrollUntil)logFollowing=false;});
   createInputs();
   applySharedColumns();
+  let lastInputHeight;
+  new ResizeObserver(([entry])=>{
+    const height=entry.contentRect.height;
+    if(height===lastInputHeight)return;
+    lastInputHeight=height;
+    applySharedColumns();
+  }).observe(document.getElementById('columns'));
   new ResizeObserver(()=>{if(logFollowing)queueLogScroll();}).observe(document.getElementById('workspace'));
   document.fonts.ready.then(applySharedColumns);
   connectSocket();
@@ -625,4 +635,5 @@ function handleKey(e) {
 
 </body>
 </html>
+
 
