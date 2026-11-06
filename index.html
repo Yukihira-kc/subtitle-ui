@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-room-toolbar-4"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=operator-width-22-6">
+<link rel="stylesheet" href="operator.css?v=operator-measured-width-7">
 
 <style>
 body {
@@ -114,6 +114,11 @@ function applySharedColumns() {
   document.querySelectorAll('#columns textarea').forEach(el=>{
     el.style.fontFamily=CaptionLayout.font;
     const style=getComputedStyle(el);
+    const row=el.closest('.input-row');
+    const textWidth=CaptionLayout.measure('あ'.repeat(Math.max(22,sharedColumns))+'。',el);
+    const fieldEdges=el.offsetWidth-el.clientWidth+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
+    const rowEdges=row.firstElementChild.getBoundingClientRect().width+parseFloat(getComputedStyle(row).columnGap);
+    workspace.style.setProperty('--input-width',Math.ceil(textWidth+fieldEdges+rowEdges+1)+'px');
     const marker=document.getElementById('guide-'+el.id.slice(-1));
     marker.style.fontFamily=style.fontFamily;
     marker.style.fontSize=style.fontSize;
@@ -218,6 +223,7 @@ function startApp(role) {
   createInputs();
   applySharedColumns();
   new ResizeObserver(()=>{if(logFollowing)queueLogScroll();}).observe(document.getElementById('workspace'));
+  document.fonts.ready.then(applySharedColumns);
   connectSocket();
 }
 
