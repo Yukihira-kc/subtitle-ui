@@ -122,11 +122,8 @@ function applySharedColumns() {
     const fieldEdges=el.offsetWidth-el.clientWidth+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
     const rowEdges=row.firstElementChild.getBoundingClientRect().width+parseFloat(getComputedStyle(row).columnGap);
     workspace.style.setProperty('--input-width',Math.ceil(textWidth+fieldEdges+rowEdges+1)+'px');
-    const marker=document.getElementById('guide-'+el.id.slice(-1));
-    marker.style.fontFamily=style.fontFamily;
-    marker.style.fontSize=style.fontSize;
-    marker.style.left=parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft)+'px';
-    marker.firstElementChild.textContent='あ'.repeat(sharedColumns);
+    const guideX=parseFloat(style.paddingLeft)+CaptionLayout.measure('あ'.repeat(sharedColumns),el);
+    el.style.backgroundImage=`linear-gradient(to right, transparent ${guideX}px, red ${guideX}px, red ${guideX+1}px, transparent ${guideX+1}px)`;
   });
   const logEl=document.getElementById('log');
   if(logEl)logEl.style.fontFamily=CaptionLayout.font;
@@ -306,7 +303,7 @@ function createInputs() {
         ">
       </div>
 
-      <div class="input-box"><textarea id="input-${k}" rows="6" class="fixed" aria-label="${k}担当入力欄"></textarea><div id="guide-${k}" class="input-guide" aria-hidden="true"><span></span></div></div>
+      <div class="input-box"><textarea id="input-${k}" rows="6" class="fixed" aria-label="${k}担当入力欄"></textarea></div>
 
     </div>
   `).join("");
