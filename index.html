@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-room-toolbar-4"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=fixed-panels-4">
+<link rel="stylesheet" href="operator.css?v=fixed-type-5">
 
 <style>
 body {
@@ -63,7 +63,6 @@ textarea, button {
 <body>
 <div id="toolbar"><small id="version">v29.8</small>
 <button id="theme-toggle" type="button" aria-pressed="false">白背景に切替</button>
-<button id="search-toggle" type="button" aria-controls="search-panel" aria-expanded="true" hidden>検索を非表示</button>
 <span id="column-status">1行15文字</span><a href="reviewer.html" target="_blank">校閲画面</a></div>
 
 <div id="role-select">
@@ -111,42 +110,18 @@ function applySharedColumns() {
   if(operatorComposing){layoutPending=true;return;}
   layoutPending=false;
   const workspace=document.getElementById('workspace');
-  workspace?.style.removeProperty('--closed-input-width');
-  let closedWidth=0;
+  if(workspace)workspace.style.setProperty('--caption-columns',sharedColumns);
   document.querySelectorAll('#columns textarea').forEach(el=>{
     el.style.fontFamily=CaptionLayout.font;
-    const style=getComputedStyle(el),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
-    el.parentElement.style.maxWidth='';
-    const available=el.clientWidth-padding;
-    // 設定文字数＋5文字分を確保できる文字サイズ。値・選択・IMEには触れない。
-    const stack=document.getElementById('columns'),stackStyle=getComputedStyle(stack);
-    const rowSpace=(stack.clientHeight-2*parseFloat(stackStyle.rowGap))/3;
-    const zoom=stack.parentElement.classList.contains('search-hidden');
-    const maxSize=zoom?28:24;
-    let size=Math.min(maxSize,Math.max(1,(rowSpace-11)/(6*1.42)));
-    for(let attempt=0;attempt<12;attempt++){
-      el.style.fontSize=size+'px';
-      const actual=CaptionLayout.measure('あ'.repeat(sharedColumns+5),el);
-      if(actual<=available-2||size<=1)break;
-      size=Math.max(1,Math.min(size-.5,size*(available-2)/actual));
-    }
-    el.style.fontSize=size+'px';el.style.lineHeight=Math.max(1,(el.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom))/6)+'px';
-    const box=el.parentElement;
-    box.style.maxWidth=zoom?Math.ceil(CaptionLayout.measure('あ'.repeat(sharedColumns+5),el)+(el.offsetWidth-el.clientWidth)+padding+2)+'px':'';
-    if(zoom){const row=el.closest('.input-row');closedWidth=Math.max(closedWidth,Math.min(box.offsetWidth,parseFloat(box.style.maxWidth))+row.firstElementChild.offsetWidth+parseFloat(getComputedStyle(row).columnGap));}
+    const style=getComputedStyle(el);
     const marker=document.getElementById('guide-'+el.id.slice(-1));
-    marker.style.fontFamily=CaptionLayout.font;marker.style.fontSize=size+'px';
+    marker.style.fontFamily=style.fontFamily;
+    marker.style.fontSize=style.fontSize;
     marker.style.left=parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft)+'px';
     marker.firstElementChild.textContent='あ'.repeat(sharedColumns);
   });
-  if(closedWidth)workspace.style.setProperty('--closed-input-width',closedWidth+'px');
   const logEl=document.getElementById('log');
-  if(logEl){
-    const style=getComputedStyle(logEl);
-    const available=logEl.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
-    logEl.style.fontFamily=CaptionLayout.font;
-    logEl.style.fontSize=Math.min(24,Math.max(1,(available-2)/(sharedColumns+.5)))+'px';
-  }
+  if(logEl)logEl.style.fontFamily=CaptionLayout.font;
   renderOperatorLog();
 }
 
@@ -232,7 +207,7 @@ function startApp(role) {
 
   createLayout();
   document.getElementById('workspace').prepend(document.getElementById('toolbar'));
-  initSearchToggle();
+
   const logEl=document.getElementById('log');let userScrollUntil=0;
   for(const name of ['wheel','touchstart','touchmove','pointerdown','pointermove','keydown'])logEl.addEventListener(name,event=>{
     if(event.type==='pointermove'&&!event.buttons)return;
@@ -242,26 +217,11 @@ function startApp(role) {
   logEl.addEventListener('scroll',()=>{const bottom=logEl.scrollHeight-logEl.clientHeight-logEl.scrollTop<=3;if(bottom)logFollowing=true;else if(Date.now()<=userScrollUntil)logFollowing=false;});
   createInputs();
   applySharedColumns();
-  new ResizeObserver(applySharedColumns).observe(document.getElementById('workspace'));
+  new ResizeObserver(()=>{if(logFollowing)queueLogScroll();}).observe(document.getElementById('workspace'));
   connectSocket();
 }
 
 // =====================
-function setSearchVisible(visible){
-  document.getElementById('workspace').classList.toggle('search-hidden',!visible);
-  document.getElementById('search-panel').hidden=!visible;
-  const button=document.getElementById('search-toggle');
-  button.textContent=visible?'検索を非表示':'検索を表示';
-  button.setAttribute('aria-expanded',String(visible));
-  try{localStorage.setItem('subtitle-operator-search-visible',String(visible));}catch(_){}
-  requestAnimationFrame(applySharedColumns);
-}
-function initSearchToggle(){
-  const button=document.getElementById('search-toggle');button.hidden=false;
-  let visible=true;try{visible=localStorage.getItem('subtitle-operator-search-visible')!=='false';}catch(_){}
-  setSearchVisible(visible);
-  button.onclick=()=>setSearchVisible(document.getElementById('search-panel').hidden);
-}
 function createLayout() {
 
   document.getElementById("app").innerHTML = `
@@ -649,7 +609,6 @@ function handleKey(e) {
       return;
     }
 
-    setSearchVisible(true);
     frame.src =
       "https://www.bing.com/search?q=" +
       encodeURIComponent(text);
