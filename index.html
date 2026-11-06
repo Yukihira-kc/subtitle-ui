@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-operator-fix"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=six-rows-1">
+<link rel="stylesheet" href="operator.css?v=search-toggle-1">
 
 <style>
 body {
@@ -63,6 +63,7 @@ textarea, button {
 <body>
 <div id="toolbar"><small id="version">v29.8</small>
 <button id="theme-toggle" type="button" aria-pressed="false">白背景に切替</button>
+<button id="search-toggle" type="button" aria-controls="search-panel" aria-expanded="true" hidden>検索を非表示</button>
 <span id="column-status">1行15文字</span><a href="reviewer.html" target="_blank">校閲画面</a></div>
 
 <div id="role-select">
@@ -222,6 +223,7 @@ function startApp(role) {
   document.getElementById("app").style.display = "block";
 
   createLayout();
+  initSearchToggle();
   const logEl=document.getElementById('log');let userScrollUntil=0;
   for(const name of ['wheel','touchstart','touchmove','pointerdown','pointermove','keydown'])logEl.addEventListener(name,event=>{
     if(event.type==='pointermove'&&!event.buttons)return;
@@ -236,6 +238,21 @@ function startApp(role) {
 }
 
 // =====================
+function setSearchVisible(visible){
+  document.getElementById('workspace').classList.toggle('search-hidden',!visible);
+  document.getElementById('search-panel').hidden=!visible;
+  const button=document.getElementById('search-toggle');
+  button.textContent=visible?'検索を非表示':'検索を表示';
+  button.setAttribute('aria-expanded',String(visible));
+  try{localStorage.setItem('subtitle-operator-search-visible',String(visible));}catch(_){}
+  requestAnimationFrame(applySharedColumns);
+}
+function initSearchToggle(){
+  const button=document.getElementById('search-toggle');button.hidden=false;
+  let visible=true;try{visible=localStorage.getItem('subtitle-operator-search-visible')!=='false';}catch(_){}
+  setSearchVisible(visible);
+  button.onclick=()=>setSearchVisible(document.getElementById('search-panel').hidden);
+}
 function createLayout() {
 
   document.getElementById("app").innerHTML = `
@@ -623,6 +640,7 @@ function handleKey(e) {
       return;
     }
 
+    setSearchVisible(true);
     frame.src =
       "https://www.bing.com/search?q=" +
       encodeURIComponent(text);
