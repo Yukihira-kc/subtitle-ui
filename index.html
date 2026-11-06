@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-operator-fix"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css">
+<link rel="stylesheet" href="operator.css?v=six-rows-1">
 
 <style>
 body {
@@ -114,7 +114,10 @@ function applySharedColumns() {
     const style=getComputedStyle(el),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
     const available=el.clientWidth-padding;
     // 設定文字数＋5文字分を確保できる文字サイズ。値・選択・IMEには触れない。
-    let size=24;
+    const stack=document.getElementById('columns'),stackStyle=getComputedStyle(stack);
+    const compact=window.matchMedia('(max-width:700px)').matches;
+    const rowSpace=(stack.clientHeight-2*parseFloat(stackStyle.rowGap))/3;
+    let size=compact?24:Math.min(24,Math.max(1,(rowSpace-10)/(6*1.42)));
     for(let attempt=0;attempt<12;attempt++){
       el.style.fontSize=size+'px';
       const actual=CaptionLayout.measure('あ'.repeat(sharedColumns+5),el);
@@ -122,6 +125,7 @@ function applySharedColumns() {
       size=Math.max(1,Math.min(size-.5,size*(available-2)/actual));
     }
     el.style.fontSize=size+'px';el.style.lineHeight='1.42';
+    el.closest('.input-row').style.height=Math.ceil(size*1.42*6+10)+'px';
     const marker=document.getElementById('guide-'+el.id.slice(-1));
     marker.style.fontFamily=CaptionLayout.font;marker.style.fontSize=size+'px';
     marker.style.left=parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft)+'px';
@@ -300,7 +304,7 @@ function createInputs() {
         ">
       </div>
 
-      <div class="input-box"><textarea id="input-${k}" class="fixed" aria-label="${k}担当入力欄"></textarea><div id="guide-${k}" class="input-guide" aria-hidden="true"><span></span></div></div>
+      <div class="input-box"><textarea id="input-${k}" rows="6" class="fixed" aria-label="${k}担当入力欄"></textarea><div id="guide-${k}" class="input-guide" aria-hidden="true"><span></span></div></div>
 
     </div>
   `).join("");
@@ -629,3 +633,4 @@ function handleKey(e) {
 
 </body>
 </html>
+
