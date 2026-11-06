@@ -27,7 +27,7 @@ body{margin:0;padding:8px;height:100vh;height:100dvh;width:100%;min-width:0;min-
 
 /* Keep operator panels in a fixed horizontal arrangement at every window width. */
 #app{overflow:auto}
-#workspace{--caption-columns:15;--input-width:calc((max(22, var(--caption-columns)) + 1) * 24px + 74px);--log-width:calc((var(--caption-columns) + .5) * 24px + 36px);min-width:calc(var(--input-width) + var(--log-width) + 180px);min-height:662px;grid-template-columns:var(--input-width) var(--log-width) minmax(160px,1fr);grid-template-rows:auto minmax(0,1fr)}
+#workspace{--caption-columns:15;--input-width:calc((min(22, var(--caption-columns)) + 3) * 24px + 74px);--log-width:calc((var(--caption-columns) + .5) * 24px + 36px);min-width:calc(var(--input-width) + var(--log-width) + 180px);min-height:662px;grid-template-columns:var(--input-width) var(--log-width) minmax(160px,1fr);grid-template-rows:auto minmax(0,1fr)}
 #workspace>#toolbar{grid-column:2/4;grid-row:1;overflow:visible}
 #toolbar>#room-nav{flex-basis:100%}
 #columns{display:grid;grid-template-rows:repeat(3,minmax(214px,1fr));grid-column:1;grid-row:1/-1}

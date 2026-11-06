@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-room-toolbar-4"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=operator-measured-width-7">
+<link rel="stylesheet" href="operator.css?v=operator-plus-three-8">
 
 <style>
 body {
@@ -115,7 +115,7 @@ function applySharedColumns() {
     el.style.fontFamily=CaptionLayout.font;
     const style=getComputedStyle(el);
     const row=el.closest('.input-row');
-    const textWidth=CaptionLayout.measure('あ'.repeat(Math.max(22,sharedColumns))+'。',el);
+    const textWidth=CaptionLayout.measure('あ'.repeat(Math.min(sharedColumns,22)+3),el);
     const fieldEdges=el.offsetWidth-el.clientWidth+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
     const rowEdges=row.firstElementChild.getBoundingClientRect().width+parseFloat(getComputedStyle(row).columnGap);
     workspace.style.setProperty('--input-width',Math.ceil(textWidth+fieldEdges+rowEdges+1)+'px');
