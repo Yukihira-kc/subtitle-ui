@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-operator-fix"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=search-toggle-1">
+<link rel="stylesheet" href="operator.css?v=search-zoom-2">
 
 <style>
 body {
@@ -113,12 +113,15 @@ function applySharedColumns() {
   document.querySelectorAll('#columns textarea').forEach(el=>{
     el.style.fontFamily=CaptionLayout.font;
     const style=getComputedStyle(el),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
+    el.parentElement.style.maxWidth='';
     const available=el.clientWidth-padding;
     // 設定文字数＋5文字分を確保できる文字サイズ。値・選択・IMEには触れない。
     const stack=document.getElementById('columns'),stackStyle=getComputedStyle(stack);
     const compact=window.matchMedia('(max-width:700px)').matches;
     const rowSpace=(stack.clientHeight-2*parseFloat(stackStyle.rowGap))/3;
-    let size=compact?24:Math.min(24,Math.max(1,(rowSpace-10)/(6*1.42)));
+    const zoom=stack.parentElement.classList.contains('search-hidden');
+    const maxSize=zoom?28:24;
+    let size=compact?maxSize:Math.min(maxSize,Math.max(1,(rowSpace-11)/(6*1.42)));
     for(let attempt=0;attempt<12;attempt++){
       el.style.fontSize=size+'px';
       const actual=CaptionLayout.measure('あ'.repeat(sharedColumns+5),el);
@@ -127,6 +130,8 @@ function applySharedColumns() {
     }
     el.style.fontSize=size+'px';el.style.lineHeight='1.42';
     el.closest('.input-row').style.height=Math.ceil(size*1.42*6+10)+'px';
+    const box=el.parentElement;
+    box.style.maxWidth=zoom?Math.ceil(CaptionLayout.measure('あ'.repeat(sharedColumns+5),el)+(el.offsetWidth-el.clientWidth)+padding+2)+'px':'';
     const marker=document.getElementById('guide-'+el.id.slice(-1));
     marker.style.fontFamily=CaptionLayout.font;marker.style.fontSize=size+'px';
     marker.style.left=parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft)+'px';
