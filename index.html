@@ -8,7 +8,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script><script src="connection.js?v=29.8-operator-fix"></script>
 <script src="shared.js?v=29.8"></script>
 <script src="pagination.js?v=29.8"></script>
-<link rel="stylesheet" href="operator.css?v=search-zoom-2">
+<link rel="stylesheet" href="operator.css?v=operator-full-height-3">
 
 <style>
 body {
@@ -110,6 +110,9 @@ function applySharedColumns() {
   document.getElementById('column-status').textContent='1行'+sharedColumns+'文字';
   if(operatorComposing){layoutPending=true;return;}
   layoutPending=false;
+  const workspace=document.getElementById('workspace');
+  workspace?.style.removeProperty('--closed-input-width');
+  let closedWidth=0;
   document.querySelectorAll('#columns textarea').forEach(el=>{
     el.style.fontFamily=CaptionLayout.font;
     const style=getComputedStyle(el),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
@@ -132,11 +135,13 @@ function applySharedColumns() {
     el.closest('.input-row').style.height=Math.ceil(size*1.42*6+10)+'px';
     const box=el.parentElement;
     box.style.maxWidth=zoom?Math.ceil(CaptionLayout.measure('あ'.repeat(sharedColumns+5),el)+(el.offsetWidth-el.clientWidth)+padding+2)+'px':'';
+    if(zoom){const row=el.closest('.input-row');closedWidth=Math.max(closedWidth,Math.min(box.offsetWidth,parseFloat(box.style.maxWidth))+row.firstElementChild.offsetWidth+parseFloat(getComputedStyle(row).columnGap));}
     const marker=document.getElementById('guide-'+el.id.slice(-1));
     marker.style.fontFamily=CaptionLayout.font;marker.style.fontSize=size+'px';
     marker.style.left=parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft)+'px';
     marker.firstElementChild.textContent='あ'.repeat(sharedColumns);
   });
+  if(closedWidth)workspace.style.setProperty('--closed-input-width',closedWidth+'px');
   const logEl=document.getElementById('log');
   if(logEl){
     const style=getComputedStyle(logEl);
@@ -228,6 +233,7 @@ function startApp(role) {
   document.getElementById("app").style.display = "block";
 
   createLayout();
+  document.getElementById('workspace').prepend(document.getElementById('toolbar'));
   initSearchToggle();
   const logEl=document.getElementById('log');let userScrollUntil=0;
   for(const name of ['wheel','touchstart','touchmove','pointerdown','pointermove','keydown'])logEl.addEventListener(name,event=>{

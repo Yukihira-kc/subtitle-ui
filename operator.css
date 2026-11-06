@@ -46,3 +46,21 @@ body{margin:0;padding:8px;height:100vh;height:100dvh;width:100%;min-width:0;min-
 @media(min-width:1101px){
   #workspace.search-hidden{grid-template-columns:minmax(0,1fr) minmax(0,calc((100% - 20px) / 3.4))}
 }
+
+/* The toolbar belongs to the log/search area; inputs span the workspace height. */
+@media(min-width:701px){
+  #workspace{grid-template-rows:auto minmax(0,1fr)}
+  #workspace>#toolbar{grid-column:2/4;grid-row:1;overflow:visible}
+  #columns{grid-column:1;grid-row:1/-1}
+  #log-panel{grid-column:2;grid-row:2}
+  #search-panel{grid-column:3;grid-row:2}
+}
+@media(min-width:1101px){
+  #workspace.search-hidden{grid-template-columns:minmax(0,var(--closed-input-width,1fr)) minmax(0,calc((100% - 20px) / 3.4)) minmax(0,1fr)}
+}
+@media(min-width:701px) and (max-width:1100px){
+  #workspace{grid-template-rows:auto minmax(0,1fr) minmax(0,1fr)}
+  #workspace>#toolbar{grid-column:2}
+  #search-panel{grid-column:2;grid-row:3}
+  #workspace.search-hidden{grid-template-columns:minmax(0,var(--closed-input-width,calc((100% - 6px) * 1.2 / 2.2))) minmax(0,calc((100% - 6px) / 2.2));justify-content:start}
+}
