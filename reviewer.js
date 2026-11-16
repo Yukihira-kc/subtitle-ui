@@ -41,7 +41,20 @@ function typing({key,value}){if(['A','B','C'].includes(key))$('review-'+key).val
 function displayLine(text){const chars=[...String(text)];if(chars.length===settings.columns+1&&/[。、]$/.test(text))chars[chars.length-1]=chars[chars.length-1]==='。'?'｡':'､';return chars.join('');}
 function displayRows(lines){return lines.flatMap(line=>CaptionLayout.wrapLine(displayLine(line),settings.columns));}
 function addHistory(item){logBackup.add(item);if(historyIds.has(item.id))return;historyIds.add(item.id);const e=document.createElement('div');e.className='entry';e.textContent=item.lines.join('\n');$('sent').appendChild(e);$('sent').scrollTop=$('sent').scrollHeight;}
-function renderQueue(items){$('queue').textContent='';items.forEach(item=>{const e=document.createElement('div');e.className='entry';e.textContent=item.lines.join('\n');$('queue').appendChild(e);});}
+function renderQueue(items){
+  const queue=$('queue'), previousTail=queue.lastElementChild?.dataset.captionId;
+  const nextTail=items.length?String(items[items.length-1].id):null;
+  const scrollTop=queue.scrollTop;
+  queue.textContent='';
+  items.forEach(item=>{
+    const e=document.createElement('div');
+    e.className='entry';
+    e.dataset.captionId=String(item.id);
+    e.textContent=item.lines.join('\n');
+    queue.appendChild(e);
+  });
+  queue.scrollTop=nextTail!==null&&nextTail!==previousTail?queue.scrollHeight:scrollTop;
+}
 let currentCaption={id:0,lines:[]};
 function display(item){currentCaption=item;CaptionView.render($('capture'),item,settings);CaptionView.confirm(socket,item);}
 document.addEventListener('visibilitychange',()=>CaptionView.confirm(socket,currentCaption));
